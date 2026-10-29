@@ -23,6 +23,9 @@ class Layer {
   Color g1 = const Color(0xFFD01515), g2 = const Color(0xFF333333);
   double gAngle = 0, skew = 0;
   int blend = 0;
+  bool tbg = false;
+  Color tbgColor = Colors.black;
+  double tbgR = 20;
 
   Map<String, dynamic> toJson() => {
         'id': id, 't': type.index, 'x': x, 'y': y, 'sc': scale, 'r': rot, 'o': opacity,
@@ -30,7 +33,7 @@ class Layer {
         'w': w, 'h': h, 'rd': radius, 'br': bright, 'ct': contrast, 'sa': sat, 'bl': blur,
         'hd': hidden, 'lk': locked, 'fl': flip, 'b': bold, 'tx': text, 'f': font, 'sh': shape,
         'p': path, 'c': color.value, 's': stroke.value, 'sd': shadow.value,
-        'gr': grad, 'gz': radial, 'g1': g1.value, 'g2': g2.value, 'ga': gAngle, 'sk': skew, 'bm': blend,
+        'gr': grad, 'gz': radial, 'g1': g1.value, 'g2': g2.value, 'ga': gAngle, 'sk': skew, 'bm': blend, 'tb': tbg, 'tc': tbgColor.value, 'tr': tbgR,
       };
 
   factory Layer.fromJson(Map<String, dynamic> m, {bool fresh = false}) {
@@ -43,6 +46,8 @@ class Layer {
     l.text = m['tx'] ?? ''; l.font = m['f'] ?? 'Cairo'; l.shape = m['sh'] ?? 'rect'; l.path = m['p'];
     l.color = Color(m['c'] as int); l.stroke = Color(m['s'] as int); l.shadow = Color(m['sd'] as int);
     l.grad = m['gr'] ?? false; l.radial = m['gz'] ?? false; l.gAngle = _d(m['ga']); l.skew = _d(m['sk']); l.blend = (m['bm'] ?? 0) as int;
+    l.tbg = m['tb'] ?? false; l.tbgR = _d(m['tr'], 20);
+    if (m['tc'] != null) l.tbgColor = Color(m['tc'] as int);
     if (m['g1'] != null) l.g1 = Color(m['g1'] as int);
     if (m['g2'] != null) l.g2 = Color(m['g2'] as int);
     return l;

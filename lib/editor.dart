@@ -33,7 +33,7 @@ const kSwatches = [
 ];
 const kEmoji = ['😀', '😍', '🔥', '✨', '💖', '⭐', '🌈', '☀️', '🌙', '🎉', '🎵', '👑', '💎', '🌸', '🍀', '🦋', '⚡', '❤️',
   '👍', '🎨', '📌', '🚀', '🌴', '☕', '😎', '🥳', '💯', '🎁', '📷', '🏆'];
-const kRatios = {'1:1': 1.0, '4:5': .8, '3:4': .75, '9:16': .5625, '16:9': 1.7778};
+const kRatios = {'1:1': 1.0, '4:5': .8, '3:4': .75, '2:3': .6667, '4:3': 1.3333, '9:16': .5625, '16:9': 1.7778};
 
 final kStickerGroups = <String, List<String>>{
   'وجوه': '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😋 😎 🤩 🥳 😏 😢 😭 😡 🤔 😴 🤯 😱 🙄 😬 👍 👏 🙏'.split(' '),
@@ -97,6 +97,7 @@ class _EditorState extends State<EditorPage> {
   double k = 1, _s0 = 1, _r0 = 0;
   bool _touch = false; // لمس عنصر: عطّل تحريك/تكبير اللوحة
   Offset _hc = Offset.zero;
+  double _rx = 0, _ry = 0;
   double _hd0 = 1, _ha0 = 0, _hs0 = 1, _hr0 = 0;
 
   @override
@@ -143,6 +144,16 @@ class _EditorState extends State<EditorPage> {
   }
 
   Widget textW(Layer l) {
+    final w = textCore(l);
+    if (!l.tbg) return w;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: l.size * .4, vertical: l.size * .2),
+      decoration: BoxDecoration(color: l.tbgColor, borderRadius: BorderRadius.circular(l.tbgR)),
+      child: w,
+    );
+  }
+
+  Widget textCore(Layer l) {
     TextStyle st({Paint? fg, Color? col, List<Shadow>? sh}) => gf(l.font,
         textStyle: TextStyle(fontSize: l.size, fontWeight: l.bold ? FontWeight.w700 : FontWeight.w400,
             letterSpacing: l.spacing, height: l.lh, color: fg == null ? col : null, foreground: fg, shadows: sh));
@@ -226,12 +237,15 @@ class _EditorState extends State<EditorPage> {
     Widget inner = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() { sel = l; tool = ''; }),
-      onScaleStart: (_) { setState(() => sel = l); _s0 = l.scale; _r0 = l.rot; },
+      onDoubleTap: () { if (l.type == LT.text) { setState(() => sel = l); run('edit'); } },
+      onScaleStart: (_) { setState(() => sel = l); _s0 = l.scale; _r0 = l.rot; _rx = l.x; _ry = l.y; },
       onScaleUpdate: (u) {
         final mm = k * tc.value.getMaxScaleOnAxis();
         setState(() {
-          l.x += u.focalPointDelta.dx / mm;
-          l.y += u.focalPointDelta.dy / mm;
+          _rx += u.focalPointDelta.dx / mm;
+          _ry += u.focalPointDelta.dy / mm;
+          l.x = _rx.abs() < 8 ? 0 : _rx;
+          l.y = _ry.abs() < 8 ? 0 : _ry;
           if (u.pointerCount > 1) { l.scale = (_s0 * u.scale).clamp(.1, 8.0); l.rot = _r0 + u.rotation; }
         });
       },
@@ -328,13 +342,13 @@ class _EditorState extends State<EditorPage> {
       ];
     }
     final common = [
-      (Icons.opacity, 'الشفافية', 'op'), (Icons.flip, 'قلب', 'flip'), (Icons.format_italic, 'إنحناء', 'skew'), (Icons.layers, 'وضع الدمج', 'blend'), (Icons.copy, 'نسخ', 'dup'),
+      (Icons.opacity, 'الشفافية', 'op'), (Icons.open_with, 'تحريك دقيق', 'nudge'), (Icons.flip, 'قلب', 'flip'), (Icons.format_italic, 'إنحناء', 'skew'), (Icons.layers, 'وضع الدمج', 'blend'), (Icons.copy, 'نسخ', 'dup'),
       (Icons.flip_to_front, 'للأمام', 'up'), (Icons.flip_to_back, 'للخلف', 'dn'), (Icons.lock_outline, 'قفل', 'lock'), (Icons.delete_outline, 'حذف', 'del'),
     ];
     return switch (l.type) {
       LT.text => [(Icons.palette, 'اللون', 'fill'), (Icons.gradient, 'تدرج', 'grad'), (Icons.font_download, 'الخطوط', 'font'), (Icons.border_style, 'إحاطة', 'stroke'),
           (Icons.blur_on, 'الظل', 'shadow'), (Icons.view_in_ar, 'العمق', 'depth'), (Icons.format_bold, 'تحديد', 'bold'), (Icons.waves, 'تقويس', 'curve'),
-          (Icons.format_line_spacing, 'ارتفاع السطر', 'lh'), (Icons.format_size, 'الحجم', 'tsize'), (Icons.edit, 'تعديل', 'edit'), ...common],
+          (Icons.format_line_spacing, 'ارتفاع السطر', 'lh'), (Icons.format_size, 'الحجم', 'tsize'), (Icons.edit, 'تعديل', 'edit'), (Icons.format_color_fill, 'خلفية النص', 'tbg'), ...common],
       LT.image => [(Icons.tune, 'فلاتر', 'filter'), (Icons.rounded_corner, 'الزوايا', 'radius'),
           (Icons.auto_fix_high, 'إزالة الخلفية', 'rmbg'), ...common],
       LT.shape => [(Icons.palette, 'اللون', 'fill'), (Icons.gradient, 'تدرج', 'grad'), (Icons.border_style, 'الحد', 'stroke'), (Icons.aspect_ratio, 'الحجم', 'ssize'), ...common],
@@ -474,6 +488,14 @@ class _EditorState extends State<EditorPage> {
       case 'bfilter': w = Column(children: [
           sld('السطوع', d.bright, -.6, .6, (v) => d.bright = v), sld('التباين', d.contrast, .5, 2, (v) => d.contrast = v),
           sld('التشبع', d.sat, 0, 2, (v) => d.sat = v), sld('ضبابية', d.blur, 0, 14, (v) => d.blur = v)]);
+      case 'tbg': w = Column(children: [
+          Row(children: [FilterChip(label: const Text('تفعيل الخلفية'), selected: l!.tbg, onSelected: (v) { l.tbg = v; push(); })]),
+          sld('الانحناء', l.tbgR, 0, 100, (v) => l.tbgR = v),
+          colors(l.tbgColor, (c) { l.tbg = true; l.tbgColor = c; })]);
+      case 'nudge': w = Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          for (final e in <(IconData, double, double)>[(Icons.arrow_upward, 0, -6), (Icons.arrow_downward, 0, 6), (Icons.arrow_back, -6, 0), (Icons.arrow_forward, 6, 0)])
+            IconButton(iconSize: 34, icon: Icon(e.$1, color: kAccent), onPressed: () { l!.x += e.$2; l.y += e.$3; push(); }),
+        ]);
       case 'curve': w = sld('تقويس', l!.curve, -1, 1, (v) => l.curve = v);
       case 'bgc': w = colors(d.bg.c1, (c) { d.bg..kind = 0..c1 = c; });
       case 'bgg': w = Column(children: [
