@@ -505,6 +505,8 @@ class _EditorState extends State<EditorPage> {
           for (final e in kRatios.entries)
             ChoiceChip(label: Text(e.key), selected: (d.w / d.h - e.value).abs() < .01,
                 onSelected: (_) { d.w = 1080; d.h = (1080 / e.value).roundToDouble(); push(); }),
+          ActionChip(avatar: const Icon(Icons.screen_rotation, size: 18), label: const Text('تدوير'),
+              onPressed: () { final t = d.w; d.w = d.h; d.h = t; push(); }),
         ]);
     }
     if (w == null) return const SizedBox.shrink();

@@ -12,7 +12,7 @@ class ColorBgPage extends StatefulWidget {
 
 const _max = 1536;
 const _ratios = <String, double?>{
-  'تحكم كامل': null, '1/1': 1, '1/2': 1 / 2, '2/3': 2 / 3, '3/4': 3 / 4, '16/9': 16 / 9,
+  'تحكم كامل': null, '1/1': 1, '1/2': 1 / 2, '2/3': 2 / 3, '3/4': 3 / 4, '9/16': 9 / 16,
 };
 
 List<Color> _grid() {
@@ -31,18 +31,27 @@ List<Color> _grid() {
 class _ColorBgState extends State<ColorBgPage> {
   final wC = TextEditingController(text: '1024'), hC = TextEditingController(text: '1024');
   String ratio = '1/1';
+  bool rot = false;
   Color color = Colors.white;
   final colors = _grid();
 
   int get w => (int.tryParse(wC.text) ?? 1024).clamp(64, _max);
   int get h => (int.tryParse(hC.text) ?? 1024).clamp(64, _max);
 
-  void pickRatio(String k) {
-    setState(() => ratio = k);
-    final r = _ratios[k];
+  String label(String k) {
+    if (!rot || ratio != k || !k.contains('/')) return k;
+    final p = k.split('/');
+    return '${p[1]}/${p[0]}';
+  }
+
+  void pickRatio(String k, {bool rotate = false}) {
+    setState(() { ratio = k; rot = rotate; });
+    var r = _ratios[k];
     if (r == null) return;
-    var nw = w.toDouble(), nh = nw / r;
-    if (nh > _max) { nh = _max.toDouble(); nw = nh * r; }
+    if (rotate) r = 1 / r;
+    final side = (w > h ? w : h).toDouble();
+    double nw, nh;
+    if (r >= 1) { nw = side; nh = side / r; } else { nh = side; nw = side * r; }
     wC.text = nw.round().toString();
     hC.text = nh.round().toString();
   }
@@ -96,9 +105,20 @@ class _ColorBgState extends State<ColorBgPage> {
                   GestureDetector(
                     onTap: () => pickRatio(k),
                     child: Container(
-                      alignment: Alignment.center, padding: const EdgeInsets.symmetric(horizontal: 18),
+                      alignment: Alignment.center, padding: const EdgeInsets.symmetric(horizontal: 12),
                       color: ratio == k ? kAccent : null,
-                      child: Text(k, style: TextStyle(color: ratio == k ? Colors.black : kAccent, fontSize: 17)),
+                      child: Row(children: [
+                        Text(label(k), style: TextStyle(color: ratio == k ? Colors.black : kAccent, fontSize: 17)),
+                        if (_ratios[k] != null && _ratios[k] != 1)
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => pickRatio(k, rotate: !(ratio == k && rot)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                              child: Icon(Icons.screen_rotation, size: 22, color: ratio == k ? Colors.black : Colors.white38),
+                            ),
+                          ),
+                      ]),
                     ),
                   ),
               ]),
