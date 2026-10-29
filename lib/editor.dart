@@ -349,8 +349,9 @@ class _EditorState extends State<EditorPage> {
       child: c,
     );
     if (selected) {
+      final base = inner; // نثبّت القيمة: الإغلاق كان يلتقط المتغير نفسه فيبني العنصر داخل نفسه بلا نهاية
       inner = Builder(builder: (bx) => Stack(children: [
-        Padding(padding: EdgeInsets.all(hs / 2), child: inner),
+        Padding(padding: EdgeInsets.all(hs / 2), child: base),
         Positioned(left: 0, top: 0, child: handle(l, hs, icon: Icons.close, resize: false, box: bx,
             onTap: () { d.layers.remove(l); sel = null; tool = ''; push(); })),
         Positioned(right: 0, top: 0, child: handle(l, hs, icon: Icons.open_in_full, box: bx)),
