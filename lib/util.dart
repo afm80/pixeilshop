@@ -18,10 +18,10 @@ class Pic {
 /// اختيار صورة من المعرض ونسخها لمجلد التطبيق حتى لا تضيع.
 /// تُصغَّر الصورة عند الاختيار (2048px) وتُقرأ أبعادها بدون فك ترميزها كاملة
 /// حتى لا ينفد الاستهلاك من الذاكرة ويتجمد التطبيق.
-Future<Pic?> pickImg() async {
+Future<Pic?> pickImg({ImageSource source = ImageSource.gallery}) async {
   try {
     final x = await ImagePicker().pickImage(
-      source: ImageSource.gallery, maxWidth: 2048, maxHeight: 2048, imageQuality: 90,
+      source: source, maxWidth: 2048, maxHeight: 2048, imageQuality: 90,
     );
     if (x == null) return null;
     final dir = await getApplicationDocumentsDirectory();

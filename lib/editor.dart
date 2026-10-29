@@ -142,7 +142,9 @@ class ShapeP extends CustomPainter {
 }
 
 class EditorPage extends StatefulWidget {
-  const EditorPage(this.doc, this.id, {super.key});
+  const EditorPage(this.doc, this.id, {super.key, this.startTool = '', this.autoRmbg = false});
+  final String startTool;
+  final bool autoRmbg;
   final Doc doc;
   final String id;
   @override
@@ -158,6 +160,7 @@ class _EditorState extends State<EditorPage> {
   final hist = <String>[];
   int hi = -1;
   double k = 1, _s0 = 1, _r0 = 0;
+  int dock = 0; // 0 أدوات، 1 طبقات
   bool _touch = false; // لمس عنصر: عطّل تحريك/تكبير اللوحة
   Offset _hc = Offset.zero;
   double _rx = 0, _ry = 0, _fx = 0, _fy = 0, _mm0 = 1;
@@ -168,6 +171,12 @@ class _EditorState extends State<EditorPage> {
   void initState() {
     super.initState();
     push(save: false);
+    tool = widget.startTool;
+    if (widget.autoRmbg) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && d.layers.isNotEmpty) { sel = d.layers.last; removeBg(d.layers.last); }
+      });
+    }
   }
 
   void push({bool save = true}) {
@@ -678,7 +687,7 @@ class _EditorState extends State<EditorPage> {
     }
     if (w == null) return const SizedBox.shrink();
     return Container(
-      color: const Color(0xFF202020), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: kPanel, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .36),
         child: SingleChildScrollView(child: w),
@@ -1015,14 +1024,38 @@ class _EditorState extends State<EditorPage> {
     setState(() {});
   }
 
+  Widget layersPanel() {
+    final t = d.layers.length;
+    if (t == 0) return const Center(child: Text('لا توجد طبقات بعد، اضغط إضافة', style: TextStyle(color: Colors.white54)));
+    final ls = d.layers.reversed.toList();
+    void ch(VoidCallback f) { f(); push(); }
+    return ReorderableListView(
+      onReorder: (o, n) {
+        if (n > o) n--;
+        ch(() { final it = d.layers.removeAt(t - 1 - o); d.layers.insert(t - 1 - n, it); });
+      },
+      children: [for (final l in ls) ListTile(
+        key: ValueKey(l.id), dense: true, selected: l == sel, selectedTileColor: kAccent.withOpacity(.12),
+        leading: Icon(l.type == LT.text ? Icons.title : l.type == LT.image ? Icons.image_outlined : Icons.category_outlined, color: l == sel ? kAccent : Colors.white54),
+        title: Text(l.type == LT.text ? l.text.split('\n').first : l.type == LT.image ? 'صورة' : 'شكل', maxLines: 1, overflow: TextOverflow.ellipsis),
+        onTap: () => setState(() { sel = l; tool = ''; }),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          IconButton(icon: Icon(l.hidden ? Icons.visibility_off : Icons.visibility, size: 20), onPressed: () => ch(() => l.hidden = !l.hidden)),
+          IconButton(icon: Icon(l.locked ? Icons.lock : Icons.lock_open, size: 20), onPressed: () => ch(() => l.locked = !l.locked)),
+          IconButton(icon: const Icon(Icons.delete_outline, size: 20), onPressed: () => ch(() { d.layers.remove(l); if (sel == l) sel = null; })),
+        ]),
+      )],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ts = toolsFor();
-    Widget ib(IconData i, VoidCallback? f) => IconButton(onPressed: f, icon: Icon(i, color: f == null ? const Color(0xFF8A6D00) : kAccent, size: 28));
+    Widget ib(IconData i, VoidCallback? f) => IconButton(onPressed: f, icon: Icon(i, color: f == null ? kAccentDim : kAccent, size: 28));
     Widget counter(IconData i, int n, VoidCallback? f) => InkWell(
           onTap: f,
           child: SizedBox(width: 52, height: 52, child: Stack(alignment: Alignment.center, children: [
-            Icon(i, size: 40, color: f == null ? const Color(0xFF8A6D00) : kAccent),
+            Icon(i, size: 40, color: f == null ? kAccentDim : kAccent),
             Text('$n', style: const TextStyle(fontSize: 11)),
           ])),
         );
@@ -1051,13 +1084,11 @@ class _EditorState extends State<EditorPage> {
                 PopupMenuItem(value: v, child: Row(children: [Icon(i, color: kAccent), const SizedBox(width: 14), Text(t)])),
             ],
           ),
-          ib(Icons.layers_outlined, layersSheet),
           ib(Icons.zoom_in, () => zoom(1.3)),
           ib(Icons.zoom_out, () => zoom(1 / 1.3)),
           const Spacer(),
           counter(Icons.rotate_left, hi, hi > 0 ? () => jump(hi - 1) : null),
           counter(Icons.rotate_right, hist.length - 1 - hi, hi < hist.length - 1 ? () => jump(hi + 1) : null),
-          ib(Icons.add_box_outlined, addSheet),
         ]),
       ),
     );
@@ -1069,6 +1100,18 @@ class _EditorState extends State<EditorPage> {
               Icon(i, color: on ? Colors.black : kAccent, size: 28),
               const SizedBox(height: 4),
               Text(n, style: TextStyle(fontSize: 11, color: on ? Colors.black : Colors.white)),
+            ]),
+          ),
+        );
+    Widget dockTab(IconData i, String t, int v) => InkWell(
+          onTap: () => setState(() => dock = v),
+          child: Container(
+            height: 46, padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: dock == v ? kAccent : Colors.transparent, width: 3))),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(i, size: 20, color: dock == v ? kAccent : Colors.white54),
+              const SizedBox(width: 6),
+              Text(t, style: TextStyle(fontSize: 13, color: dock == v ? kAccent : Colors.white54)),
             ]),
           ),
         );
@@ -1107,10 +1150,29 @@ class _EditorState extends State<EditorPage> {
               ]),
             ),
             Container(
-              color: kPanel, height: 68,
-              child: ListView(scrollDirection: Axis.horizontal, children: [
-                if (sel != null) toolBtn(Icons.arrow_back, 'رجوع', () => setState(() { sel = null; tool = ''; }), false),
-                for (final (i, n, id) in ts) toolBtn(i, n, () => run(id), tool == id),
+              color: kPanel,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(height: 46, child: Row(children: [
+                  dockTab(Icons.tune, 'الأدوات', 0),
+                  dockTab(Icons.layers_outlined, 'الطبقات (${d.layers.length})', 1),
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: FilledButton.icon(
+                      onPressed: addSheet,
+                      icon: const Icon(Icons.add, size: 20),
+                      label: const Text('إضافة'),
+                      style: FilledButton.styleFrom(backgroundColor: kAccent, foregroundColor: Colors.black),
+                    ),
+                  ),
+                ])),
+                if (dock == 0)
+                  SizedBox(height: 68, child: ListView(scrollDirection: Axis.horizontal, children: [
+                    if (sel != null) toolBtn(Icons.arrow_back, 'رجوع', () => setState(() { sel = null; tool = ''; }), false),
+                    for (final (i, n, id) in ts) toolBtn(i, n, () => run(id), tool == id),
+                  ]))
+                else
+                  SizedBox(height: 172, child: layersPanel()),
               ]),
             ),
           ]),

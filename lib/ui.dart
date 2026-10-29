@@ -2,10 +2,12 @@ import 'dart:ui' show PointMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-const kAccent = Color(0xFFFFC400);
-const kBg = Color(0xFF1E1E1E);
-const kPanel = Color(0xFF242424);
-const kDot = Color(0xFF2B2B2B);
+const kAccent = Color(0xFF2EE6B8);
+const kAccentDim = Color(0xFF1B7F68);
+const kBg = Color(0xFF0F1115);
+const kPanel = Color(0xFF181B21);
+const kCard = Color(0xFF20242C);
+const kDot = Color(0xFF171A20);
 
 /// خلفية داكنة منقّطة
 class DotBg extends StatelessWidget {
