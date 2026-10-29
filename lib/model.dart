@@ -23,6 +23,8 @@ class Layer {
   Color g1 = const Color(0xFFD01515), g2 = const Color(0xFF333333);
   double gAngle = 0, skew = 0;
   int blend = 0;
+  int fx = 0;
+  double fxAmt = 1, warm = 0;
   double cropL = 0, cropT = 0, cropR = 0, cropB = 0;
   bool tbg = false;
   Color tbgColor = Colors.black;
@@ -34,7 +36,7 @@ class Layer {
         'w': w, 'h': h, 'rd': radius, 'br': bright, 'ct': contrast, 'sa': sat, 'bl': blur,
         'hd': hidden, 'lk': locked, 'fl': flip, 'b': bold, 'tx': text, 'f': font, 'sh': shape,
         'p': path, 'c': color.value, 's': stroke.value, 'sd': shadow.value,
-        'gr': grad, 'gz': radial, 'g1': g1.value, 'g2': g2.value, 'ga': gAngle, 'sk': skew, 'bm': blend, 'kl': cropL, 'kt': cropT, 'kr': cropR, 'kb': cropB, 'tb': tbg, 'tc': tbgColor.value, 'tr': tbgR,
+        'gr': grad, 'gz': radial, 'g1': g1.value, 'g2': g2.value, 'ga': gAngle, 'sk': skew, 'bm': blend, 'fx': fx, 'fa': fxAmt, 'wm': warm, 'kl': cropL, 'kt': cropT, 'kr': cropR, 'kb': cropB, 'tb': tbg, 'tc': tbgColor.value, 'tr': tbgR,
       };
 
   factory Layer.fromJson(Map<String, dynamic> m, {bool fresh = false}) {
@@ -47,6 +49,7 @@ class Layer {
     l.text = m['tx'] ?? ''; l.font = m['f'] ?? 'Cairo'; l.shape = m['sh'] ?? 'rect'; l.path = m['p'];
     l.color = Color(m['c'] as int); l.stroke = Color(m['s'] as int); l.shadow = Color(m['sd'] as int);
     l.grad = m['gr'] ?? false; l.radial = m['gz'] ?? false; l.gAngle = _d(m['ga']); l.skew = _d(m['sk']); l.blend = (m['bm'] ?? 0) as int;
+    l.fx = (m['fx'] ?? 0) as int; l.fxAmt = _d(m['fa'], 1); l.warm = _d(m['wm']);
     l.cropL = _d(m['kl']); l.cropT = _d(m['kt']); l.cropR = _d(m['kr']); l.cropB = _d(m['kb']);
     l.tbg = m['tb'] ?? false; l.tbgR = _d(m['tr'], 20);
     if (m['tc'] != null) l.tbgColor = Color(m['tc'] as int);
@@ -83,10 +86,12 @@ class Doc {
   double radius = 0, frameW = 0, opacity = 1, bright = 0, contrast = 1, sat = 1, blur = 0;
   bool flip = false;
   Color frameColor = Colors.black;
+  int fx = 0;
+  double fxAmt = 1, warm = 0, vig = 0;
 
   Map<String, dynamic> toJson() => {
         'w': w, 'h': h, 'bg': bg.toJson(), 'ls': layers.map((l) => l.toJson()).toList(),
-        'fx': {'r': radius, 'fw': frameW, 'o': opacity, 'br': bright, 'ct': contrast, 'sa': sat, 'bl': blur, 'fl': flip, 'fc': frameColor.value},
+        'fx': {'r': radius, 'fw': frameW, 'o': opacity, 'br': bright, 'ct': contrast, 'sa': sat, 'bl': blur, 'fl': flip, 'fc': frameColor.value, 'px': fx, 'pa': fxAmt, 'wm': warm, 'vg': vig},
       };
 
   factory Doc.fromJson(Map<String, dynamic> m) {
@@ -97,6 +102,7 @@ class Doc {
       final x = Map<String, dynamic>.from(f);
       d.radius = _d(x['r']); d.frameW = _d(x['fw']); d.opacity = _d(x['o'], 1); d.bright = _d(x['br']);
       d.contrast = _d(x['ct'], 1); d.sat = _d(x['sa'], 1); d.blur = _d(x['bl']); d.flip = x['fl'] ?? false;
+      d.fx = (x['px'] ?? 0) as int; d.fxAmt = _d(x['pa'], 1); d.warm = _d(x['wm']); d.vig = _d(x['vg']);
       if (x['fc'] != null) d.frameColor = Color(x['fc'] as int);
     }
     return d;

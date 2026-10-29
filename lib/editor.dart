@@ -47,6 +47,48 @@ final kStickerGroups = <String, List<String>>{
   'زخارف': '﷽ ❁ ✦ ❖ ✿ ❀ ✺ ☪ ۞ ۩ ❝ ❞ ✓ ✔ ➤ ♛ ♚ ✪ ☘ ♠ ♥ ♦ ♣ ★ ☆ ✂ ☎'.split(' '),
 };
 
+const kFxNames = ['أصلي', 'أبيض وأسود', 'سيبيا', 'دافئ', 'بارد', 'درامي', 'سينمائي', 'وردي', 'باهت', 'سالب', 'زاهي'];
+const List<List<double>> kFxMats = [
+  [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+  [.2126, .7152, .0722, 0, 0, .2126, .7152, .0722, 0, 0, .2126, .7152, .0722, 0, 0, 0, 0, 0, 1, 0],
+  [.393, .769, .189, 0, 0, .349, .686, .168, 0, 0, .272, .534, .131, 0, 0, 0, 0, 0, 1, 0],
+  [1.1, 0, 0, 0, 10, 0, 1, 0, 0, 0, 0, 0, .85, 0, -10, 0, 0, 0, 1, 0],
+  [.9, 0, 0, 0, -8, 0, 1, 0, 0, 0, 0, 0, 1.15, 0, 12, 0, 0, 0, 1, 0],
+  [1.3, 0, 0, 0, -38, 0, 1.3, 0, 0, -38, 0, 0, 1.3, 0, -38, 0, 0, 0, 1, 0],
+  [1.1, 0, 0, 0, 5, 0, 1, .05, 0, 0, 0, .1, 1.05, 0, 10, 0, 0, 0, 1, 0],
+  [1.1, 0, .05, 0, 15, 0, .95, 0, 0, 0, .1, 0, 1.05, 0, 10, 0, 0, 0, 1, 0],
+  [.9, 0, 0, 0, 25, 0, .9, 0, 0, 25, 0, 0, .9, 0, 25, 0, 0, 0, 1, 0],
+  [-1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0],
+  [1.4, -.2, -.2, 0, 0, -.2, 1.4, -.2, 0, 0, -.2, -.2, 1.4, 0, 0, 0, 0, 0, 1, 0],
+];
+
+/// ضرب مصفوفتي ألوان (4x5): يطبّق b أولاً ثم a
+List<double> mulMat(List<double> a, List<double> b) {
+  final r = List<double>.filled(20, 0);
+  for (var i = 0; i < 4; i++) {
+    for (var j = 0; j < 5; j++) {
+      var s = 0.0;
+      for (var k = 0; k < 4; k++) {
+        s += a[i * 5 + k] * b[k * 5 + j];
+      }
+      if (j == 4) s += a[i * 5 + 4];
+      r[i * 5 + j] = s;
+    }
+  }
+  return r;
+}
+
+List<double> fxMat(int preset, double amt, double bright, double contrast, double sat, double warm) {
+  final s = sat, c = contrast, t = (1 - c) * 127.5 + bright * 255;
+  final sr = (1 - s) * .2126, sg = (1 - s) * .7152, sb = (1 - s) * .0722;
+  final base = <double>[(sr + s) * c, sg * c, sb * c, 0, t, sr * c, (sg + s) * c, sb * c, 0, t, sr * c, sg * c, (sb + s) * c, 0, t, 0, 0, 0, 1, 0];
+  final p = kFxMats[preset.clamp(0, kFxMats.length - 1)];
+  final id = kFxMats[0];
+  final mixed = <double>[for (var i = 0; i < 20; i++) id[i] * (1 - amt) + p[i] * amt];
+  final w = <double>[1 + .2 * warm, 0, 0, 0, 8 * warm, 0, 1, 0, 0, 0, 0, 0, 1 - .2 * warm, 0, -8 * warm, 0, 0, 0, 1, 0];
+  return mulMat(w, mulMat(mixed, base));
+}
+
 class ShapeP extends CustomPainter {
   ShapeP(this.l);
   final Layer l;
@@ -157,7 +199,7 @@ class _EditorState extends State<EditorPage> {
   void snack(String t) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
 
   // ---------- رسم الطبقات ----------
-  List<double> mat(Layer l) => mat2(l.bright, l.contrast, l.sat);
+  List<double> mat(Layer l) => fxMat(l.fx, l.fxAmt, l.bright, l.contrast, l.sat, l.warm);
 
   List<double> mat2(double bright, double contrast, double sat) {
     final s = sat, c = contrast, t = (1 - c) * 127.5 + bright * 255;
@@ -345,7 +387,16 @@ class _EditorState extends State<EditorPage> {
   }
 
   Widget fxWrap(Widget c) {
-    if (d.bright != 0 || d.contrast != 1 || d.sat != 1) c = ColorFiltered(colorFilter: ColorFilter.matrix(mat2(d.bright, d.contrast, d.sat)), child: c);
+    if (d.bright != 0 || d.contrast != 1 || d.sat != 1 || d.fx != 0 || d.warm != 0) {
+      c = ColorFiltered(colorFilter: ColorFilter.matrix(fxMat(d.fx, d.fxAmt, d.bright, d.contrast, d.sat, d.warm)), child: c);
+    }
+    if (d.vig > 0) {
+      c = Stack(children: [
+        Positioned.fill(child: c),
+        Positioned.fill(child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(
+            gradient: RadialGradient(radius: .85, colors: [Colors.transparent, Colors.black.withOpacity(d.vig)], stops: const [.45, 1]))))),
+      ]);
+    }
     if (d.blur > 0) c = ImageFiltered(imageFilter: ui.ImageFilter.blur(sigmaX: d.blur, sigmaY: d.blur), child: c);
     if (d.flip) c = Transform.flip(flipX: true, child: c);
     if (d.frameW > 0) {
@@ -501,6 +552,34 @@ class _EditorState extends State<EditorPage> {
     );
   }
 
+  Widget fxStrip(int cur, void Function(int) pick, Widget Function() sample) => SizedBox(
+        height: 88,
+        child: ListView(scrollDirection: Axis.horizontal, children: [
+          for (var i = 0; i < kFxNames.length; i++)
+            GestureDetector(
+              onTap: () => pick(i),
+              child: Container(
+                width: 70, margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                child: Column(children: [
+                  Container(
+                    width: 62, height: 58,
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: cur == i ? kAccent : Colors.white24, width: cur == i ? 3 : 1)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: ColorFiltered(colorFilter: ColorFilter.matrix(fxMat(i, 1, 0, 1, 1, 0)), child: SizedBox(width: 62, height: 58, child: sample())),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(kFxNames[i], style: TextStyle(fontSize: 10, color: cur == i ? kAccent : Colors.white70)),
+                ]),
+              ),
+            ),
+        ]),
+      );
+
+  Widget docSample() => Container(
+        decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFF9800), Color(0xFFE91E63), Color(0xFF3F51B5), Color(0xFF4CAF50)], begin: Alignment.topLeft, end: Alignment.bottomRight)));
+
   Widget panel() {
     final l = sel;
     if (l == null && !{'bgc', 'bgg', 'size', 'frame', 'bradius', 'bop', 'bfilter'}.contains(tool)) return const SizedBox.shrink();
@@ -538,6 +617,9 @@ class _EditorState extends State<EditorPage> {
           sld('التدوير', l.rot * 180 / pi, -180, 180, (v) => l.rot = v * pi / 180),
           sld('التكبير', l.scale, .1, 6, (v) => l.scale = v)]);
       case 'filter': w = Column(children: [
+          fxStrip(l!.fx, (i) { l.fx = i; push(); }, () => Image.file(File(l.path!), fit: BoxFit.cover, cacheWidth: 120)),
+          sld('شدة الفلتر', l.fxAmt, 0, 1, (v) => l.fxAmt = v),
+          sld('الحرارة', l.warm, -1, 1, (v) => l.warm = v),
           sld('السطوع', l!.bright, -.6, .6, (v) => l.bright = v), sld('التباين', l.contrast, .5, 2, (v) => l.contrast = v),
           sld('التشبع', l.sat, 0, 2, (v) => l.sat = v), sld('ضبابية', l.blur, 0, 14, (v) => l.blur = v)]);
       case 'radius': w = sld('انحناء', l!.radius, 0, 400, (v) => l.radius = v);
@@ -548,6 +630,10 @@ class _EditorState extends State<EditorPage> {
       case 'bradius': w = sld('الزوايا', d.radius, 0, min(d.w, d.h) / 2, (v) => d.radius = v);
       case 'bop': w = sld('الشفافية', d.opacity, .05, 1, (v) => d.opacity = v);
       case 'bfilter': w = Column(children: [
+          fxStrip(d.fx, (i) { d.fx = i; push(); }, docSample),
+          sld('شدة الفلتر', d.fxAmt, 0, 1, (v) => d.fxAmt = v),
+          sld('الحرارة', d.warm, -1, 1, (v) => d.warm = v),
+          sld('التظليل', d.vig, 0, .9, (v) => d.vig = v),
           sld('السطوع', d.bright, -.6, .6, (v) => d.bright = v), sld('التباين', d.contrast, .5, 2, (v) => d.contrast = v),
           sld('التشبع', d.sat, 0, 2, (v) => d.sat = v), sld('ضبابية', d.blur, 0, 14, (v) => d.blur = v)]);
       case 'tbg': w = Column(children: [
@@ -572,7 +658,13 @@ class _EditorState extends State<EditorPage> {
         ]);
     }
     if (w == null) return const SizedBox.shrink();
-    return Container(color: const Color(0xFF202020), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), child: w);
+    return Container(
+      color: const Color(0xFF202020), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .36),
+        child: SingleChildScrollView(child: w),
+      ),
+    );
   }
 
   // ---------- إضافة ----------
