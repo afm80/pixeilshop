@@ -42,6 +42,8 @@ final kStickerGroups = <String, List<String>>{
   'حيوانات': '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🦅 🦋 🐝 🐢 🐬'.split(' '),
   'طعام': '🍎 🍌 🍇 🍓 🍉 🍕 🍔 🍟 🌮 🍩 🍰 🎂 🍫 ☕ 🍵 🥤 🍦'.split(' '),
   'أنشطة': '⚽ 🏀 🏈 ⚾ 🎾 🏐 🎮 🎯 🎵 🎤 🎧 🎸 🎨 📷 🎬 🏆 🥇 🎉 🎁 🚀'.split(' '),
+  'فواصل وإطارات': '━━━━━━ ═══════ ─── ✦ ─── ❖ ━━ ❖ ━━ ◆━━━━◆ ❝ ❞ « » 〖 〗 【 】 ﴾ ﴿ ꕥ ❀━━❀ ✿ ❁ ❃ ❋ ☙ ❧ ۞ ⚜ ✾'.split(' '),
+  'رموز إسلامية': '﷽ ﷲ ﷺ ☪ ۞ ۩ 🕌 🕋 🌙 ⭐ 📿 🤲 🕯️ 🏮 ✨ 📖 ☪️ ﴾ ﴿ ٭ ❂'.split(' '),
   'زخارف': '﷽ ❁ ✦ ❖ ✿ ❀ ✺ ☪ ۞ ۩ ❝ ❞ ✓ ✔ ➤ ♛ ♚ ✪ ☘ ♠ ♥ ♦ ♣ ★ ☆ ✂ ☎'.split(' '),
 };
 
@@ -64,6 +66,26 @@ class ShapeP extends CustomPainter {
       case 'heart':
         p..moveTo(w / 2, h * .9)..cubicTo(-w * .2, h * .45, w * .15, -h * .1, w / 2, h * .3)
           ..cubicTo(w * .85, -h * .1, w * 1.2, h * .45, w / 2, h * .9);
+      case 'diamond': p..moveTo(w / 2, 0)..lineTo(w, h / 2)..lineTo(w / 2, h)..lineTo(0, h / 2)..close();
+      case 'hex':
+        for (var i = 0; i < 6; i++) {
+          final a = i * pi / 3 - pi / 2;
+          final o = Offset(w / 2 + cos(a) * w / 2, h / 2 + sin(a) * h / 2);
+          i == 0 ? p.moveTo(o.dx, o.dy) : p.lineTo(o.dx, o.dy);
+        }
+        p.close();
+      case 'star8':
+        for (var i = 0; i < 16; i++) {
+          final r = i.isEven ? .5 : .32, a = i * pi / 8 - pi / 2;
+          final o = Offset(w / 2 + cos(a) * r * w, h / 2 + sin(a) * r * h);
+          i == 0 ? p.moveTo(o.dx, o.dy) : p.lineTo(o.dx, o.dy);
+        }
+        p.close();
+      case 'arrow': p..moveTo(0, h * .3)..lineTo(w * .6, h * .3)..lineTo(w * .6, 0)..lineTo(w, h / 2)..lineTo(w * .6, h)..lineTo(w * .6, h * .7)..lineTo(0, h * .7)..close();
+      case 'cross': p..moveTo(w * .35, 0)..lineTo(w * .65, 0)..lineTo(w * .65, h * .35)..lineTo(w, h * .35)..lineTo(w, h * .65)..lineTo(w * .65, h * .65)..lineTo(w * .65, h)..lineTo(w * .35, h)..lineTo(w * .35, h * .65)..lineTo(0, h * .65)..lineTo(0, h * .35)..lineTo(w * .35, h * .35)..close();
+      case 'ring': p..addOval(Offset.zero & s)..addOval(Rect.fromLTWH(w * .18, h * .18, w * .64, h * .64))..fillType = PathFillType.evenOdd;
+      case 'moon': p..moveTo(w * .7, h * .05)..cubicTo(w * .1, h * .05, w * .1, h * .95, w * .7, h * .95)..cubicTo(w * .3, h * .75, w * .3, h * .25, w * .7, h * .05);
+      case 'line': p.addRect(Rect.fromLTWH(0, h * .45, w, h * .1));
       default: p.addRRect(RRect.fromRectAndRadius(Offset.zero & s, Radius.circular(l.radius)));
     }
     final fill = Paint()..color = l.color;
@@ -592,7 +614,7 @@ class _EditorState extends State<EditorPage> {
   void shapes() => showModalBottomSheet(context: context, builder: (ctx) => Padding(
         padding: const EdgeInsets.all(18),
         child: Wrap(spacing: 14, runSpacing: 14, children: [
-          for (final s in const {'rect': 'مربع', 'circle': 'دائرة', 'tri': 'مثلث', 'star': 'نجمة', 'heart': 'قلب'}.entries)
+          for (final s in const {'rect': 'مربع', 'circle': 'دائرة', 'tri': 'مثلث', 'star': 'نجمة', 'heart': 'قلب', 'diamond': 'معين', 'hex': 'سداسي', 'star8': 'نجمة ثمانية', 'arrow': 'سهم', 'cross': 'زائد', 'ring': 'حلقة', 'moon': 'هلال', 'line': 'خط'}.entries)
             ActionChip(label: Text(s.value), onPressed: () { Navigator.pop(ctx); add(Layer(LT.shape)..shape = s.key..w = 500..h = 500); }),
         ])));
 
