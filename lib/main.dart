@@ -7,9 +7,14 @@ import 'templates.dart';
 import 'util.dart';
 import 'color_bg.dart';
 import 'ui.dart';
+import 'user_fonts.dart';
 import 'package:flutter/services.dart';
 
-void main() => runApp(const App());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try { await UserFonts.init(); } catch (_) {}
+  runApp(const App());
+}
 
 class App extends StatelessWidget {
   const App({super.key});

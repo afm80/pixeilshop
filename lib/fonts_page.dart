@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'ui.dart';
+import 'user_fonts.dart';
 
 /// يرجع الخط المطلوب، وإن لم يوجد في الحزمة يرجع Cairo بدل أن ينهار التطبيق
 TextStyle gf(String name, {TextStyle? textStyle}) {
+  if (name.startsWith('user_')) return TextStyle(fontFamily: name).merge(textStyle);
   try {
     return GoogleFonts.getFont(name, textStyle: textStyle);
   } catch (_) {
@@ -35,6 +37,7 @@ class FontsPage extends StatefulWidget {
 class _FontsState extends State<FontsPage> {
   late String cur = widget.current;
   bool arabic = true;
+  bool mine = false;
   late String cat;
 
   Map<String, List<String>> get set => arabic ? kArabicFonts : kEnglishFonts;
@@ -42,6 +45,7 @@ class _FontsState extends State<FontsPage> {
   @override
   void initState() {
     super.initState();
+    mine = widget.current.startsWith('user_');
     arabic = !kEnglishFonts.values.any((l) => l.contains(widget.current));
     cat = set.entries.firstWhere((e) => e.value.contains(widget.current), orElse: () => set.entries.first).key;
   }
@@ -59,7 +63,7 @@ class _FontsState extends State<FontsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final list = set[cat] ?? const <String>[];
+    final list = mine ? UserFonts.names : (set[cat] ?? const <String>[]);
     final sample = widget.sample.trim().isEmpty ? (arabic ? 'اكتب هنا' : 'Write here') : widget.sample.trim().replaceAll(RegExp(r'\s*\n\s*'), ' ');
     return Scaffold(
       body: DotBg(
@@ -81,10 +85,29 @@ class _FontsState extends State<FontsPage> {
             Container(
               color: kPanel,
               child: Row(children: [
-                tab('إنجليزي', !arabic, () => setState(() { arabic = false; cat = set.keys.first; })),
-                tab('عربي', arabic, () => setState(() { arabic = true; cat = set.keys.first; })),
+                tab('خطوطي', mine, () => setState(() => mine = true)),
+                tab('إنجليزي', !mine && !arabic, () => setState(() { mine = false; arabic = false; cat = set.keys.first; })),
+                tab('عربي', !mine && arabic, () => setState(() { mine = false; arabic = true; cat = set.keys.first; })),
               ]),
             ),
+            if (mine)
+              InkWell(
+                onTap: () async {
+                  try {
+                    final f = await UserFonts.add();
+                    if (f != null) setState(() => cur = f);
+                  } catch (e) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذرت إضافة الخط: $e')));
+                  }
+                },
+                child: Container(
+                  height: 52, alignment: Alignment.center, color: const Color(0xFF333333),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.add, color: kAccent), SizedBox(width: 8), Text('إضافة خط من الجهاز (ttf / otf)', style: TextStyle(color: kAccent)),
+                  ]),
+                ),
+              )
+            else
             SizedBox(
               height: 52,
               child: ListView(scrollDirection: Axis.horizontal, children: [
