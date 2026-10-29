@@ -22,6 +22,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+    - assets/logo_home.png
 flutter_launcher_icons:
   android: true
   ios: false
