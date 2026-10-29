@@ -128,12 +128,6 @@ class _HomeState extends State<Home> {
       );
 
   bool expanded = false;
-  Color tint = Colors.white;
-  static const _strip = [
-    Colors.white, Color(0xFFFF6F61), Color(0xFFF44336), Color(0xFFFF0055), Color(0xFFE91E63), Color(0xFF9C27B0),
-    Color(0xFF673AB7), Color(0xFF3F51B5), Color(0xFF2196F3), Color(0xFF00BCD4), Color(0xFF009688),
-    Color(0xFF4CAF50), Color(0xFF8BC34A), Color(0xFFCDDC39),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -166,22 +160,7 @@ class _HomeState extends State<Home> {
               textDirection: TextDirection.ltr,
               child: Row(children: [
                 BarBtn(Icons.more_vert, 'خيارات', exitDialog),
-                Expanded(
-                  child: SizedBox(
-                    height: 66,
-                    child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8), children: [
-                      for (final k in _strip)
-                        GestureDetector(
-                          onTap: () => setState(() => tint = k),
-                          child: Container(
-                            width: 52, margin: const EdgeInsets.fromLTRB(3, 13, 3, 13),
-                            decoration: BoxDecoration(color: k, borderRadius: BorderRadius.circular(6),
-                                border: tint == k ? Border.all(color: kAccent, width: 3) : null),
-                          ),
-                        ),
-                    ]),
-                  ),
-                ),
+                const Expanded(child: SizedBox(height: 66)),
                 BarBtn(Icons.movie_outlined, 'شروحات', () => showDialog(
                       context: context,
                       builder: (_) => const AlertDialog(backgroundColor: kPanel, content: Text('الشروحات قريباً')),
@@ -189,10 +168,7 @@ class _HomeState extends State<Home> {
               ]),
             ),
             const Spacer(flex: 2),
-            ColorFiltered(
-              colorFilter: ColorFilter.mode(tint, BlendMode.modulate),
-              child: Image.asset('assets/logo.png', width: 300),
-            ),
+            Image.asset('assets/logo_home.png', width: 280),
             const Spacer(flex: 2),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
