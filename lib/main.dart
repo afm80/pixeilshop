@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'editor.dart';
 import 'model.dart';
-import 'templates.dart';
 import 'util.dart';
 import 'color_bg.dart';
 import 'ui.dart';
@@ -88,23 +87,6 @@ class _HomeState extends State<Home> {
     final s = k < 1 ? k : 1.0;
     open(Doc((p.w * s).roundToDouble(), (p.h * s).roundToDouble(), Bg(kind: 2, path: p.path), []));
   }
-
-  void templates() => showModalBottomSheet(
-        context: context,
-        builder: (ctx) => GridView.count(
-          crossAxisCount: 3, padding: const EdgeInsets.all(12), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: .8,
-          children: [
-            for (final t in kTpls)
-              InkWell(
-                onTap: () { Navigator.pop(ctx); open(t.build()); },
-                child: Container(alignment: Alignment.center,
-                    decoration: BoxDecoration(color: t.build().bg.c1, borderRadius: BorderRadius.circular(8),
-                        gradient: t.build().bg.kind == 1 ? LinearGradient(colors: [t.build().bg.c1, t.build().bg.c2]) : null),
-                    child: Text(t.name, style: const TextStyle(fontWeight: FontWeight.w700, shadows: [Shadow(blurRadius: 6)]))),
-              ),
-          ],
-        ),
-      );
 
   void savedSheet() => showModalBottomSheet(
         context: context,
@@ -194,8 +176,6 @@ class _HomeState extends State<Home> {
                               ]))
                             : bigTile(Icons.edit_note, 'تصميم جديد', () => setState(() => expanded = true)),
                       ),
-                      const SizedBox(width: 2),
-                      Expanded(child: bigTile(Icons.brush_outlined, 'قوالب', templates)),
                     ]),
                   ),
                   const SizedBox(height: 2),

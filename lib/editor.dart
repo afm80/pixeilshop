@@ -12,7 +12,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'model.dart';
-import 'templates.dart';
 import 'util.dart';
 import 'ui.dart';
 import 'fonts_page.dart';
@@ -161,7 +160,8 @@ class _EditorState extends State<EditorPage> {
   double k = 1, _s0 = 1, _r0 = 0;
   bool _touch = false; // لمس عنصر: عطّل تحريك/تكبير اللوحة
   Offset _hc = Offset.zero;
-  double _rx = 0, _ry = 0;
+  double _rx = 0, _ry = 0, _fx = 0, _fy = 0, _mm0 = 1;
+  bool _gv = false, _gh = false; // خطوط المنتصف أثناء السحب
   double _hd0 = 1, _ha0 = 0, _hs0 = 1, _hr0 = 0;
 
   @override
@@ -309,7 +309,10 @@ class _EditorState extends State<EditorPage> {
         final v = e.position - _hc;
         setState(() {
           l.scale = (_hs0 * v.distance / _hd0).clamp(.1, 8.0);
-          l.rot = _hr0 + (v.direction - _ha0);
+          var r = _hr0 + (v.direction - _ha0);
+          final q = (r / (pi / 4)).roundToDouble() * (pi / 4);
+          if ((r - q).abs() < .06) r = q;
+          l.rot = r;
         });
       },
       onPointerUp: (e) {
@@ -334,31 +337,44 @@ class _EditorState extends State<EditorPage> {
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() { sel = l; tool = ''; }),
       onDoubleTap: () { if (l.type == LT.text) { setState(() => sel = l); run('edit'); } },
-      onScaleStart: (_) { setState(() => sel = l); _s0 = l.scale; _r0 = l.rot; _rx = l.x; _ry = l.y; },
+      onScaleStart: (u) {
+        // نثبّت نقطة البداية: الحركة تُحسب من موضع الإصبع المطلق لا من تراكم فروق صغيرة
+        _s0 = l.scale; _r0 = l.rot; _rx = l.x; _ry = l.y;
+        _fx = u.focalPoint.dx; _fy = u.focalPoint.dy;
+        _mm0 = max(k * tc.value.getMaxScaleOnAxis(), .0001);
+        if (sel != l) setState(() { sel = l; tool = ''; });
+      },
       onScaleUpdate: (u) {
-        final mm = k * tc.value.getMaxScaleOnAxis();
+        double x = _rx + (u.focalPoint.dx - _fx) / _mm0;
+        double y = _ry + (u.focalPoint.dy - _fy) / _mm0;
+        final th = 7 / _mm0; // مسافة الالتصاق بالبكسل على الشاشة
+        final sx = x.abs() < th, sy = y.abs() < th;
         setState(() {
-          _rx += u.focalPointDelta.dx / mm;
-          _ry += u.focalPointDelta.dy / mm;
-          l.x = _rx.abs() < 8 ? 0 : _rx;
-          l.y = _ry.abs() < 8 ? 0 : _ry;
-          if (u.pointerCount > 1) { l.scale = (_s0 * u.scale).clamp(.1, 8.0); l.rot = _r0 + u.rotation; }
+          l.x = sx ? 0 : x.clamp(-d.w * .6, d.w * .6);
+          l.y = sy ? 0 : y.clamp(-d.h * .6, d.h * .6);
+          _gv = sx; _gh = sy;
+          if (u.pointerCount > 1) {
+            l.scale = (_s0 * u.scale).clamp(.1, 8.0);
+            var r = _r0 + u.rotation;
+            final q = (r / (pi / 4)).roundToDouble() * (pi / 4);
+            if ((r - q).abs() < .06) r = q; // التصاق الزاوية كل 45°
+            l.rot = r;
+          }
         });
       },
-      onScaleEnd: (_) => push(),
+      onScaleEnd: (_) { setState(() { _gv = false; _gh = false; }); push(); },
       child: c,
     );
-    if (selected) {
-      final base = inner; // نثبّت القيمة: الإغلاق كان يلتقط المتغير نفسه فيبني العنصر داخل نفسه بلا نهاية
-      inner = Builder(builder: (bx) => Stack(children: [
-        Padding(padding: EdgeInsets.all(hs / 2), child: base),
-        Positioned(left: 0, top: 0, child: handle(l, hs, icon: Icons.close, resize: false, box: bx,
-            onTap: () { d.layers.remove(l); sel = null; tool = ''; push(); })),
-        Positioned(right: 0, top: 0, child: handle(l, hs, icon: Icons.open_in_full, box: bx)),
-        Positioned(left: 0, bottom: 0, child: handle(l, hs, icon: Icons.open_in_full, box: bx)),
-        Positioned(right: 0, bottom: 0, child: handle(l, hs, icon: Icons.rotate_right, box: bx)),
-      ]));
-    }
+    // البنية ثابتة سواء كان العنصر محدداً أم لا، حتى لا يُعاد إنشاء مستشعر اللمس أثناء السحب
+    final base = inner;
+    inner = Builder(builder: (bx) => Stack(children: [
+      Padding(padding: EdgeInsets.all(selected ? hs / 2 : 0), child: base),
+      if (selected) Positioned(left: 0, top: 0, child: handle(l, hs, icon: Icons.close, resize: false, box: bx,
+          onTap: () { d.layers.remove(l); sel = null; tool = ''; push(); })),
+      if (selected) Positioned(right: 0, top: 0, child: handle(l, hs, icon: Icons.open_in_full, box: bx)),
+      if (selected) Positioned(left: 0, bottom: 0, child: handle(l, hs, icon: Icons.open_in_full, box: bx)),
+      if (selected) Positioned(right: 0, bottom: 0, child: handle(l, hs, icon: Icons.rotate_right, box: bx)),
+    ]));
     final w = Listener(
       onPointerDown: (_) { if (!_touch) setState(() => _touch = true); },
       onPointerUp: (_) { if (_touch) setState(() => _touch = false); },
@@ -372,7 +388,7 @@ class _EditorState extends State<EditorPage> {
         ),
       ),
     );
-    return l.blend == 0 ? w : BlendBox(mode: kBlends[l.blend].$2, child: w);
+    return KeyedSubtree(key: ValueKey(l.id), child: l.blend == 0 ? w : BlendBox(mode: kBlends[l.blend].$2, child: w));
   }
 
   Widget bgW() {
@@ -427,6 +443,8 @@ class _EditorState extends State<EditorPage> {
                   Stack(alignment: Alignment.center, children: [
                     Positioned.fill(child: GestureDetector(onTap: () => setState(() { sel = null; tool = ''; }), child: bgW())),
                     for (final l in d.layers) if (!l.hidden) layerW(l),
+                    if (_gv) Positioned(left: d.w / 2 - 1.5 / k, top: 0, bottom: 0, child: IgnorePointer(child: Container(width: 3 / k, color: kAccent))),
+                    if (_gh) Positioned(top: d.h / 2 - 1.5 / k, left: 0, right: 0, child: IgnorePointer(child: Container(height: 3 / k, color: kAccent))),
                   ]),
                 ),
               ),
@@ -715,15 +733,6 @@ class _EditorState extends State<EditorPage> {
             ActionChip(label: Text(s.value), onPressed: () { Navigator.pop(ctx); add(Layer(LT.shape)..shape = s.key..w = 500..h = 500); }),
         ])));
 
-  void templatesSheet() => showModalBottomSheet(context: context, builder: (ctx) => GridView.count(
-        crossAxisCount: 3, padding: const EdgeInsets.all(12), mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: .8,
-        children: [for (final t in kTpls) InkWell(
-            onTap: () { Navigator.pop(ctx); d = t.build(); sel = null; tool = ''; push(); },
-            child: Container(alignment: Alignment.center,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: t.build().bg.c1,
-                    gradient: t.build().bg.kind == 1 ? LinearGradient(colors: [t.build().bg.c1, t.build().bg.c2], begin: Alignment.topCenter, end: Alignment.bottomCenter) : null),
-                child: Text(t.name, style: const TextStyle(fontWeight: FontWeight.w700, shadows: [Shadow(blurRadius: 6)]))))]));
-
   void layersSheet() => showModalBottomSheet(context: context, isScrollControlled: true, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
         final ls = d.layers.reversed.toList();
         void ch(VoidCallback f) { f(); push(); setS(() {}); }
@@ -986,7 +995,6 @@ class _EditorState extends State<EditorPage> {
               (Icons.image_outlined, 'صورة', addImage),
               (Icons.emoji_emotions_outlined, 'ملصق', stickers),
               (Icons.category_outlined, 'شكل', shapes),
-              (Icons.dashboard_outlined, 'قوالب', templatesSheet),
             ])
               SizedBox(width: 90, child: InkWell(
                 onTap: () {
