@@ -95,6 +95,9 @@ class _EditorState extends State<EditorPage> {
   final hist = <String>[];
   int hi = -1;
   double k = 1, _s0 = 1, _r0 = 0;
+  bool _touch = false; // لمس عنصر: عطّل تحريك/تكبير اللوحة
+  Offset _hc = Offset.zero;
+  double _hd0 = 1, _ha0 = 0, _hs0 = 1, _hr0 = 0;
 
   @override
   void initState() {
@@ -181,29 +184,80 @@ class _EditorState extends State<EditorPage> {
     push();
   }
 
+  Widget handle(Layer l, double hs, {required IconData icon, VoidCallback? onTap, bool resize = true, required BuildContext box}) {
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (e) {
+        if (!resize) return;
+        final rb = box.findRenderObject() as RenderBox;
+        _hc = rb.localToGlobal(rb.size.center(Offset.zero));
+        final v = e.position - _hc;
+        _hd0 = max(v.distance, 1);
+        _ha0 = v.direction;
+        _hs0 = l.scale;
+        _hr0 = l.rot;
+      },
+      onPointerMove: (e) {
+        if (!resize) return;
+        final v = e.position - _hc;
+        setState(() {
+          l.scale = (_hs0 * v.distance / _hd0).clamp(.1, 8.0);
+          l.rot = _hr0 + (v.direction - _ha0);
+        });
+      },
+      onPointerUp: (e) {
+        if (resize) { push(); } else { onTap?.call(); }
+      },
+      child: Container(
+        width: hs, height: hs,
+        decoration: const BoxDecoration(color: kAccent, shape: BoxShape.circle),
+        child: Icon(icon, color: Colors.black, size: hs * .62),
+      ),
+    );
+  }
+
   Widget layerW(Layer l) {
     Widget c = body(l);
-    if (l == sel) c = DecoratedBox(decoration: BoxDecoration(border: Border.all(color: Colors.white, width: 3 / k)), child: c);
     c = Opacity(opacity: l.opacity, child: c);
-    final w = IgnorePointer(
-      ignoring: l.locked,
-      child: Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.identity()..translate(l.x, l.y)..rotateZ(l.rot)..scale(l.scale * (l.flip ? -1 : 1), l.scale, 1)..multiply(Matrix4.skewX(l.skew)),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() { sel = l; tool = ''; }),
-          onScaleStart: (_) { setState(() => sel = l); _s0 = l.scale; _r0 = l.rot; },
-          onScaleUpdate: (u) {
-            final m = k * tc.value.getMaxScaleOnAxis();
-            setState(() {
-              l.x += u.focalPointDelta.dx / m;
-              l.y += u.focalPointDelta.dy / m;
-              if (u.pointerCount > 1) { l.scale = (_s0 * u.scale).clamp(.1, 8.0); l.rot = _r0 + u.rotation; }
-            });
-          },
-          onScaleEnd: (_) => push(),
-          child: c,
+    final selected = l == sel && !l.locked;
+    if (l == sel) c = DecoratedBox(decoration: BoxDecoration(border: Border.all(color: Colors.white, width: 3 / k)), child: c);
+    final m = k * tc.value.getMaxScaleOnAxis() * l.scale;
+    final hs = (46 / m).clamp(20.0, 600.0);
+    Widget inner = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() { sel = l; tool = ''; }),
+      onScaleStart: (_) { setState(() => sel = l); _s0 = l.scale; _r0 = l.rot; },
+      onScaleUpdate: (u) {
+        final mm = k * tc.value.getMaxScaleOnAxis();
+        setState(() {
+          l.x += u.focalPointDelta.dx / mm;
+          l.y += u.focalPointDelta.dy / mm;
+          if (u.pointerCount > 1) { l.scale = (_s0 * u.scale).clamp(.1, 8.0); l.rot = _r0 + u.rotation; }
+        });
+      },
+      onScaleEnd: (_) => push(),
+      child: c,
+    );
+    if (selected) {
+      inner = Builder(builder: (bx) => Stack(children: [
+        Padding(padding: EdgeInsets.all(hs / 2), child: inner),
+        Positioned(left: 0, top: 0, child: handle(l, hs, icon: Icons.close, resize: false, box: bx,
+            onTap: () { d.layers.remove(l); sel = null; tool = ''; push(); })),
+        Positioned(right: 0, top: 0, child: handle(l, hs, icon: Icons.open_in_full, box: bx)),
+        Positioned(left: 0, bottom: 0, child: handle(l, hs, icon: Icons.open_in_full, box: bx)),
+        Positioned(right: 0, bottom: 0, child: handle(l, hs, icon: Icons.rotate_right, box: bx)),
+      ]));
+    }
+    final w = Listener(
+      onPointerDown: (_) { if (!_touch) setState(() => _touch = true); },
+      onPointerUp: (_) { if (_touch) setState(() => _touch = false); },
+      onPointerCancel: (_) { if (_touch) setState(() => _touch = false); },
+      child: IgnorePointer(
+        ignoring: l.locked,
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()..translate(l.x, l.y)..rotateZ(l.rot)..scale(l.scale * (l.flip ? -1 : 1), l.scale, 1)..multiply(Matrix4.skewX(l.skew)),
+          child: inner,
         ),
       ),
     );
@@ -239,7 +293,7 @@ class _EditorState extends State<EditorPage> {
   Widget canvas(BoxConstraints bc) {
     k = min(bc.maxWidth / d.w, bc.maxHeight / d.h) * .94;
     return InteractiveViewer(
-      transformationController: tc, minScale: .6, maxScale: 5,
+      transformationController: tc, minScale: .6, maxScale: 5, panEnabled: !_touch, scaleEnabled: !_touch,
       child: Center(
         child: RepaintBoundary(
           key: key,
