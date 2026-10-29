@@ -12,15 +12,15 @@ TextStyle gf(String name, {TextStyle? textStyle}) {
 }
 
 const kArabicFonts = <String, List<String>>{
-  'إعلانية': ['Lalezar', 'Changa', 'Cairo', 'Tajawal', 'Almarai', 'Mada', 'El Messiri', 'Rakkas', 'Harmattan', 'Alexandria', 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Baloo Bhaijaan 2'],
+  'إعلانية': ['Lalezar', 'Changa', 'Cairo', 'Tajawal', 'Almarai', 'Mada', 'El Messiri', 'Rakkas', 'Harmattan', 'Alexandria', 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Baloo Bhaijaan 2', 'Cairo Play', 'Rubik', 'Zain', 'Marhey', 'Playpen Sans Arabic', 'Qahiri'],
   'نسخ و ثلث': ['Amiri', 'Markazi Text', 'Scheherazade New', 'Lateef', 'Noto Naskh Arabic', 'Amiri Quran'],
-  'رقعة وفارسي': ['Aref Ruqaa', 'Aref Ruqaa Ink', 'Katibeh', 'Noto Nastaliq Urdu', 'Vazirmatn', 'Lemonada', 'Gulzar'],
-  'ديواني وكوفي': ['Reem Kufi', 'Reem Kufi Fun', 'Noto Kufi Arabic', 'Kufam', 'Jomhuria', 'Mirza'],
+  'رقعة وفارسي': ['Aref Ruqaa', 'Aref Ruqaa Ink', 'Katibeh', 'Noto Nastaliq Urdu', 'Vazirmatn', 'Lemonada', 'Gulzar', 'Vibes', 'Ruwudu'],
+  'ديواني وكوفي': ['Reem Kufi', 'Reem Kufi Fun', 'Noto Kufi Arabic', 'Kufam', 'Jomhuria', 'Mirza', 'Blaka', 'Blaka Hollow', 'Blaka Ink'],
 };
 
 const kEnglishFonts = <String, List<String>>{
-  'عصرية': ['Montserrat', 'Oswald', 'Anton', 'Bebas Neue', 'Righteous', 'Poppins', 'Raleway'],
-  'خطية': ['Pacifico', 'Lobster', 'Dancing Script', 'Great Vibes', 'Satisfy', 'Permanent Marker'],
+  'عصرية': ['Montserrat', 'Oswald', 'Anton', 'Bebas Neue', 'Righteous', 'Poppins', 'Raleway', 'Bangers', 'Black Ops One', 'Orbitron', 'Fredoka', 'Comfortaa', 'Archivo Black', 'Bungee', 'Alfa Slab One', 'Fugaz One', 'Monoton'],
+  'خطية': ['Pacifico', 'Lobster', 'Dancing Script', 'Great Vibes', 'Satisfy', 'Permanent Marker', 'Caveat', 'Kaushan Script', 'Sacramento', 'Shadows Into Light'],
   'كلاسيكية': ['Playfair Display', 'Merriweather', 'Cinzel', 'Abril Fatface', 'Lora'],
 };
 
