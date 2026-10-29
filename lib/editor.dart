@@ -669,10 +669,14 @@ class _EditorState extends State<EditorPage> {
 
   // ---------- إضافة ----------
   Future<void> addImage() async {
-    final p = await pickImg();
-    if (p == null) return;
-    final w = min(d.w * .7, p.w);
-    add(Layer(LT.image)..path = p.path..w = w..h = w * p.h / p.w);
+    try {
+      final p = await pickImg();
+      if (p == null || !mounted) return;
+      final w = min(d.w * .7, p.w);
+      add(Layer(LT.image)..path = p.path..w = w..h = w * p.h / p.w);
+    } catch (e) {
+      if (mounted) snack('تعذّر إضافة الصورة');
+    }
   }
 
   void stickers() => showModalBottomSheet(
@@ -984,7 +988,11 @@ class _EditorState extends State<EditorPage> {
               (Icons.dashboard_outlined, 'قوالب', templatesSheet),
             ])
               SizedBox(width: 90, child: InkWell(
-                onTap: () { Navigator.pop(ctx); f(); },
+                onTap: () {
+                  Navigator.pop(ctx);
+                  // نؤخّر التنفيذ حتى تُغلق القائمة تماماً (يمنع التجمد)
+                  Future.delayed(const Duration(milliseconds: 250), () { if (mounted) f(); });
+                },
                 child: Padding(padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Column(children: [Icon(i, color: kAccent, size: 30), const SizedBox(height: 6), Text(t, style: const TextStyle(fontSize: 12))])),
               )),

@@ -16,14 +16,29 @@ class Pic {
 }
 
 /// اختيار صورة من المعرض ونسخها لمجلد التطبيق حتى لا تضيع.
+/// تُصغَّر الصورة عند الاختيار (2048px) وتُقرأ أبعادها بدون فك ترميزها كاملة
+/// حتى لا ينفد الاستهلاك من الذاكرة ويتجمد التطبيق.
 Future<Pic?> pickImg() async {
-  final x = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 92);
-  if (x == null) return null;
-  final dir = await getApplicationDocumentsDirectory();
-  final ext = x.path.contains('.') ? x.path.split('.').last : 'jpg';
-  final f = await File(x.path).copy('${dir.path}/img_${DateTime.now().microsecondsSinceEpoch}.$ext');
-  final im = await decodeImageFromList(await f.readAsBytes());
-  return Pic(f.path, im.width.toDouble(), im.height.toDouble());
+  try {
+    final x = await ImagePicker().pickImage(
+      source: ImageSource.gallery, maxWidth: 2048, maxHeight: 2048, imageQuality: 90,
+    );
+    if (x == null) return null;
+    final dir = await getApplicationDocumentsDirectory();
+    final ext = x.path.contains('.') ? x.path.split('.').last.toLowerCase() : 'jpg';
+    final f = await File(x.path).copy('${dir.path}/img_${DateTime.now().microsecondsSinceEpoch}.$ext');
+    final bytes = await f.readAsBytes();
+    final buf = await ui.ImmutableBuffer.fromUint8List(bytes);
+    final d = await ui.ImageDescriptor.encoded(buf);
+    final w = d.width.toDouble(), h = d.height.toDouble();
+    d.dispose();
+    buf.dispose();
+    if (w <= 0 || h <= 0) return null;
+    return Pic(f.path, w, h);
+  } catch (e) {
+    debugPrint('pickImg error: $e');
+    return null;
+  }
 }
 
 /// حفظ تلقائي للتصاميم في SharedPreferences.
