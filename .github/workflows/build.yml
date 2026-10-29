@@ -23,6 +23,13 @@ jobs:
         run: |
           sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n    <application|' android/app/src/main/AndroidManifest.xml
       - run: flutter pub get
+      - name: Patch file_picker compileSdk
+        run: |
+          for f in $(find $HOME/.pub-cache -path "*file_picker*/android/build.gradle*"); do
+            echo "patching $f"
+            sed -i -E 's/(compileSdk(Version)?[[:space:]]*=?[[:space:]]*)3[0-9]/\136/' "$f"
+            grep -n "compileSdk" "$f" || true
+          done
       - run: dart run flutter_launcher_icons
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
