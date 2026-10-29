@@ -310,7 +310,7 @@ class _EditorState extends State<EditorPage> {
         return;
       case 'font':
         final f = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => FontsPage(current: l!.font, sample: l.text)));
-        if (f != null) { l.font = f; tool = ''; push(); }
+        if (f != null) { l!.font = f; tool = ''; push(); }
         return;
       case 'add':
         addSheet();
