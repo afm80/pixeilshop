@@ -1068,6 +1068,7 @@ class _EditorState extends State<EditorPage> {
             Expanded(
               child: Stack(children: [
                 LayoutBuilder(builder: (_, bc) => canvas(bc)),
+                Positioned(left: 0, right: 0, bottom: 0, child: panel()),
                 if (sel?.type == LT.text)
                   Align(
                     alignment: Alignment.topCenter,
@@ -1093,7 +1094,6 @@ class _EditorState extends State<EditorPage> {
                   ),
               ]),
             ),
-            panel(),
             Container(
               color: kPanel, height: 68,
               child: ListView(scrollDirection: Axis.horizontal, children: [
