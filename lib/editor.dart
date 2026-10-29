@@ -455,7 +455,7 @@ class _EditorState extends State<EditorPage> {
           (Icons.blur_on, 'الظل', 'shadow'), (Icons.view_in_ar, 'العمق', 'depth'), (Icons.format_bold, 'تحديد', 'bold'), (Icons.waves, 'تقويس', 'curve'),
           (Icons.format_line_spacing, 'ارتفاع السطر', 'lh'), (Icons.format_size, 'الحجم', 'tsize'), (Icons.edit, 'تعديل', 'edit'), (Icons.format_color_fill, 'خلفية النص', 'tbg'), ...common],
       LT.image => [(Icons.crop, 'قص', 'crop'), (Icons.blur_on, 'الظل', 'shadow'), (Icons.tune, 'فلاتر', 'filter'), (Icons.rounded_corner, 'الزوايا', 'radius'),
-          (Icons.auto_fix_high, 'إزالة الخلفية', 'rmbg'), ...common],
+          ...common],
       LT.shape => [(Icons.palette, 'اللون', 'fill'), (Icons.gradient, 'تدرج', 'grad'), (Icons.border_style, 'الحد', 'stroke'), (Icons.aspect_ratio, 'الحجم', 'ssize'), ...common],
     };
   }
@@ -1022,11 +1022,6 @@ class _EditorState extends State<EditorPage> {
                 case 'save': saveDesignDialog();
                 case 'img': saveDialog(share: false);
                 case 'share': saveDialog(share: true);
-                case 'set':
-                  final p = await SharedPreferences.getInstance();
-                  if (!mounted) return;
-                  final k2 = await askText(context, 'مفتاح remove.bg API', p.getString('rbkey') ?? '');
-                  if (k2 != null) await p.setString('rbkey', k2.trim());
                 case 'exit': exitDialog();
               }
             },
@@ -1034,7 +1029,7 @@ class _EditorState extends State<EditorPage> {
               for (final (v, t, i) in const [
                 ('new', 'تصميم جديد', Icons.edit_note), ('save', 'حفظ التصميم', Icons.save_outlined),
                 ('img', 'حفظ الصورة', Icons.photo_outlined), ('share', 'مشاركة الصورة', Icons.share_outlined),
-                ('set', 'إعدادات التطبيق', Icons.settings_outlined), ('exit', 'خروج', Icons.logout),
+                ('exit', 'خروج', Icons.logout),
               ])
                 PopupMenuItem(value: v, child: Row(children: [Icon(i, color: kAccent), const SizedBox(width: 14), Text(t)])),
             ],
