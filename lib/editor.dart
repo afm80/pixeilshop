@@ -176,7 +176,39 @@ class _EditorState extends State<EditorPage> {
     Widget w = SizedBox(width: l.w, height: l.h, child: Image.file(File(l.path!), fit: BoxFit.cover, cacheWidth: 1400));
     w = ColorFiltered(colorFilter: ColorFilter.matrix(mat(l)), child: w);
     if (l.blur > 0) w = ImageFiltered(imageFilter: ui.ImageFilter.blur(sigmaX: l.blur, sigmaY: l.blur), child: w);
-    return ClipRRect(borderRadius: BorderRadius.circular(l.radius), child: w);
+    if (l.cropL > 0 || l.cropT > 0 || l.cropR > 0 || l.cropB > 0) {
+      w = SizedBox(
+        width: max(l.w * (1 - l.cropL - l.cropR), 8.0),
+        height: max(l.h * (1 - l.cropT - l.cropB), 8.0),
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.topLeft, minWidth: l.w, maxWidth: l.w, minHeight: l.h, maxHeight: l.h,
+            child: Transform.translate(offset: Offset(-l.cropL * l.w, -l.cropT * l.h), child: w),
+          ),
+        ),
+      );
+    }
+    Widget r = ClipRRect(borderRadius: BorderRadius.circular(l.radius), child: w);
+    if (l.shadowBlur > 0 || l.depth > 0) {
+      r = DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(l.radius),
+          boxShadow: [BoxShadow(color: l.shadow, blurRadius: l.shadowBlur, offset: Offset(l.depth, l.depth))],
+        ),
+        child: r,
+      );
+    }
+    return r;
+  }
+
+  /// تغيير القص مع إبقاء محتوى الصورة في مكانه
+  void cropSet(Layer l, void Function() f) {
+    final ox = (l.cropL - l.cropR) / 2 * l.w, oy = (l.cropT - l.cropB) / 2 * l.h;
+    f();
+    final dx = (l.cropL - l.cropR) / 2 * l.w - ox, dy = (l.cropT - l.cropB) / 2 * l.h - oy;
+    final sx = l.scale * (l.flip ? -1 : 1);
+    l.x += cos(l.rot) * sx * dx - sin(l.rot) * l.scale * dy;
+    l.y += sin(l.rot) * sx * dx + cos(l.rot) * l.scale * dy;
   }
 
   Widget body(Layer l) => switch (l.type) {
@@ -349,7 +381,7 @@ class _EditorState extends State<EditorPage> {
       LT.text => [(Icons.palette, 'اللون', 'fill'), (Icons.gradient, 'تدرج', 'grad'), (Icons.font_download, 'الخطوط', 'font'), (Icons.border_style, 'إحاطة', 'stroke'),
           (Icons.blur_on, 'الظل', 'shadow'), (Icons.view_in_ar, 'العمق', 'depth'), (Icons.format_bold, 'تحديد', 'bold'), (Icons.waves, 'تقويس', 'curve'),
           (Icons.format_line_spacing, 'ارتفاع السطر', 'lh'), (Icons.format_size, 'الحجم', 'tsize'), (Icons.edit, 'تعديل', 'edit'), (Icons.format_color_fill, 'خلفية النص', 'tbg'), ...common],
-      LT.image => [(Icons.tune, 'فلاتر', 'filter'), (Icons.rounded_corner, 'الزوايا', 'radius'),
+      LT.image => [(Icons.crop, 'قص', 'crop'), (Icons.blur_on, 'الظل', 'shadow'), (Icons.tune, 'فلاتر', 'filter'), (Icons.rounded_corner, 'الزوايا', 'radius'),
           (Icons.auto_fix_high, 'إزالة الخلفية', 'rmbg'), ...common],
       LT.shape => [(Icons.palette, 'اللون', 'fill'), (Icons.gradient, 'تدرج', 'grad'), (Icons.border_style, 'الحد', 'stroke'), (Icons.aspect_ratio, 'الحجم', 'ssize'), ...common],
     };
@@ -461,7 +493,15 @@ class _EditorState extends State<EditorPage> {
         ]));
       case 'color': w = colors(l!.color, (c) => l.color = c);
       case 'stroke': w = Column(children: [sld('السماكة', l!.strokeW, 0, 40, (v) => l.strokeW = v), colors(l.stroke, (c) => l.stroke = c)]);
-      case 'shadow': w = Column(children: [sld('التمويه', l!.shadowBlur, 0, 80, (v) => l.shadowBlur = v), colors(l.shadow, (c) => l.shadow = c)]);
+      case 'shadow': w = Column(children: [
+          sld('التمويه', l!.shadowBlur, 0, 80, (v) => l.shadowBlur = v),
+          if (l.type == LT.image) sld('الإزاحة', l.depth, 0, 80, (v) => l.depth = v),
+          colors(l.shadow, (c) => l.shadow = c)]);
+      case 'crop': w = Column(children: [
+          sld('اليسار', l!.cropL, 0, .85, (v) => cropSet(l, () => l.cropL = min(v, .9 - l.cropR))),
+          sld('اليمين', l.cropR, 0, .85, (v) => cropSet(l, () => l.cropR = min(v, .9 - l.cropL))),
+          sld('الأعلى', l.cropT, 0, .85, (v) => cropSet(l, () => l.cropT = min(v, .9 - l.cropB))),
+          sld('الأسفل', l.cropB, 0, .85, (v) => cropSet(l, () => l.cropB = min(v, .9 - l.cropT)))]);
       case 'depth': w = Column(children: [sld('العمق', l!.depth, 0, 80, (v) => l.depth = v), colors(l.shadow, (c) => l.shadow = c)]);
       case 'skew': w = sld('إنحناء', l!.skew, -.8, .8, (v) => l.skew = v);
       case 'blend': w = SizedBox(height: 56, child: ListView(scrollDirection: Axis.horizontal, children: [

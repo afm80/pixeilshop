@@ -23,6 +23,7 @@ class Layer {
   Color g1 = const Color(0xFFD01515), g2 = const Color(0xFF333333);
   double gAngle = 0, skew = 0;
   int blend = 0;
+  double cropL = 0, cropT = 0, cropR = 0, cropB = 0;
   bool tbg = false;
   Color tbgColor = Colors.black;
   double tbgR = 20;
@@ -33,7 +34,7 @@ class Layer {
         'w': w, 'h': h, 'rd': radius, 'br': bright, 'ct': contrast, 'sa': sat, 'bl': blur,
         'hd': hidden, 'lk': locked, 'fl': flip, 'b': bold, 'tx': text, 'f': font, 'sh': shape,
         'p': path, 'c': color.value, 's': stroke.value, 'sd': shadow.value,
-        'gr': grad, 'gz': radial, 'g1': g1.value, 'g2': g2.value, 'ga': gAngle, 'sk': skew, 'bm': blend, 'tb': tbg, 'tc': tbgColor.value, 'tr': tbgR,
+        'gr': grad, 'gz': radial, 'g1': g1.value, 'g2': g2.value, 'ga': gAngle, 'sk': skew, 'bm': blend, 'kl': cropL, 'kt': cropT, 'kr': cropR, 'kb': cropB, 'tb': tbg, 'tc': tbgColor.value, 'tr': tbgR,
       };
 
   factory Layer.fromJson(Map<String, dynamic> m, {bool fresh = false}) {
@@ -46,6 +47,7 @@ class Layer {
     l.text = m['tx'] ?? ''; l.font = m['f'] ?? 'Cairo'; l.shape = m['sh'] ?? 'rect'; l.path = m['p'];
     l.color = Color(m['c'] as int); l.stroke = Color(m['s'] as int); l.shadow = Color(m['sd'] as int);
     l.grad = m['gr'] ?? false; l.radial = m['gz'] ?? false; l.gAngle = _d(m['ga']); l.skew = _d(m['sk']); l.blend = (m['bm'] ?? 0) as int;
+    l.cropL = _d(m['kl']); l.cropT = _d(m['kt']); l.cropR = _d(m['kr']); l.cropB = _d(m['kb']);
     l.tbg = m['tb'] ?? false; l.tbgR = _d(m['tr'], 20);
     if (m['tc'] != null) l.tbgColor = Color(m['tc'] as int);
     if (m['g1'] != null) l.g1 = Color(m['g1'] as int);
