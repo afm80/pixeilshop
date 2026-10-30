@@ -35,7 +35,14 @@ class MlKitService {
     if (!_supported || !Platform.isAndroid) return null;
     SubjectSegmenter? seg;
     try {
-      seg = SubjectSegmenter(options: SubjectSegmenterOptions(enableForegroundBitmap: false));
+      seg = SubjectSegmenter(options: SubjectSegmenterOptions(
+          enableForegroundConfidenceMask: true,
+          enableForegroundBitmap: false,
+          enableMultipleSubjects: SubjectResultOptions(
+            enableConfidenceMask: false,
+            enableSubjectBitmap: false,
+          ),
+        ));
       final dynamic res = await seg.processImage(InputImage.fromFilePath(pngPath));
       final conf = _toFloat(res?.foregroundConfidenceMask);
       if (conf == null || conf.isEmpty) return null;
