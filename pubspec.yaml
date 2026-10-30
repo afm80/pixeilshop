@@ -1,30 +1,51 @@
-name: pixeilshop
-description: Pixeilshop - محرر تصاميم وملصقات
+name: omnistudio_ai
+description: OmniStudio AI Free - استوديو تصميم وتحرير صور بمعالجة محلية على الجهاز، مجاني 100%
 publish_to: none
 version: 1.0.0+1
+
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.27.0"
+
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+  # State management
+  flutter_bloc: ^9.1.0
+  equatable: ^2.0.7
+
+  # UI / canvas
   google_fonts: ^6.2.1
-  image_picker: ^1.1.2
   flutter_colorpicker: ^1.1.0
-  shared_preferences: ^2.3.2
-  path_provider: ^2.1.4
-  http: ^1.2.2
-  share_plus: ^10.0.2
-  gal: ^2.3.0
-  image: ^4.2.0
-  file_picker: ^8.1.2
+  flutter_staggered_grid_view: ^0.7.0
+
+  # Media / storage / export
+  image_picker: ^1.1.2
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  hive_flutter: ^1.1.0
+  gal: ^2.3.1
+  share_plus: ^10.1.4
+  flutter_image_compress: ^2.4.0
+
+  # On-device ML (free, no API keys)
+  # ملاحظة: حزم ML Kit تُترك بدون قيد إصدار ليحل pub توافق google_mlkit_commons تلقائياً.
+  google_mlkit_commons: any
+  google_mlkit_subject_segmentation: any
+  google_mlkit_selfie_segmentation: any
+  tflite_flutter: ^0.11.0
+  speech_to_text: ^7.0.0
+
 dev_dependencies:
-  flutter_launcher_icons: ^0.14.1
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
 flutter:
   uses-material-design: true
   assets:
-    - assets/logo.png
-    - assets/logo_home.png
-flutter_launcher_icons:
-  android: true
-  ios: false
-  image_path: assets/logo.png
+    - assets/models/
