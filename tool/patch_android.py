@@ -36,3 +36,14 @@ for name in ('build.gradle.kts', 'build.gradle'):
         f.write_text(t, encoding='utf-8')
         print('patched', f)
 print('manifest patched')
+
+# بعض الإضافات (مثل tflite_flutter) تُترجَم بـ Java 1.8 و Kotlin 17 فيفشل فحص التوافق.
+# نحوّل الفحص إلى تحذير بدل خطأ.
+gp = pathlib.Path('android/gradle.properties')
+txt = gp.read_text(encoding='utf-8') if gp.exists() else ''
+if 'kotlin.jvm.target.validation.mode' not in txt:
+    if txt and not txt.endswith('\n'):
+        txt += '\n'
+    txt += 'kotlin.jvm.target.validation.mode=warning\n'
+    gp.write_text(txt, encoding='utf-8')
+print('gradle.properties patched')
