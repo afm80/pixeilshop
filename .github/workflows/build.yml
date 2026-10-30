@@ -18,21 +18,18 @@ jobs:
           channel: stable
           cache: true
       - name: Create Android project files
-        run: flutter create --platforms=android --org com.pixeilshop .
-      - name: Add permissions
-        run: |
-          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n    <application|' android/app/src/main/AndroidManifest.xml
+        run: flutter create --platforms=android --org com.omnistudio --project-name omnistudio_ai .
+      - name: Patch Android (permissions, minSdk, ML Kit)
+        run: python3 tool/patch_android.py
       - run: flutter pub get
-      - name: Patch file_picker compileSdk
-        run: |
-          for f in $(find $HOME/.pub-cache -path "*file_picker*/android/build.gradle*"); do
-            echo "patching $f"
-            sed -i -E 's/(compileSdk(Version)?[[:space:]]*=?[[:space:]]*)3[0-9]/\136/' "$f"
-            grep -n "compileSdk" "$f" || true
-          done
-      - run: dart run flutter_launcher_icons
-      - run: flutter build apk --release
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        continue-on-error: true
+      - name: Test
+        run: flutter test
+        continue-on-error: true
+      - run: flutter build apk --release --split-per-abi
       - uses: actions/upload-artifact@v4
         with:
-          name: pixeilshop-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: omnistudio-apk
+          path: build/app/outputs/flutter-apk/*.apk
