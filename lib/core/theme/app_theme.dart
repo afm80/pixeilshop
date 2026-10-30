@@ -1,0 +1,42 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class AppColors {
+  static const bg = Color(0xFF0E0F13);
+  static const panel = Color(0xFF171921);
+  static const panel2 = Color(0xFF20232D);
+  static const accent = Color(0xFF8B6CFF);
+  static const accent2 = Color(0xFF36D1C4);
+  static const text = Color(0xFFF2F3F7);
+  static const muted = Color(0xFF9AA0B2);
+  static const danger = Color(0xFFFF5C6C);
+}
+
+ThemeData buildTheme() {
+  final base = ThemeData.dark(useMaterial3: true);
+  return base.copyWith(
+    scaffoldBackgroundColor: AppColors.bg,
+    colorScheme: const ColorScheme.dark(
+      primary: AppColors.accent,
+      secondary: AppColors.accent2,
+      surface: AppColors.panel,
+      error: AppColors.danger,
+    ),
+    textTheme: GoogleFonts.tajawalTextTheme(base.textTheme),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.panel,
+      elevation: 0,
+      centerTitle: true,
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppColors.panel,
+      modalBackgroundColor: AppColors.panel,
+    ),
+    sliderTheme: base.sliderTheme.copyWith(
+      trackHeight: 3,
+      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+      overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+    ),
+    snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+  );
+}
