@@ -190,7 +190,7 @@ class _EditorPanelState extends State<EditorPanel> {
                 title: 'الطبقة المحددة',
                 open: ec.isOpen('layer'),
                 onTap: () => ec.toggle('layer'),
-                builder: () => sel == null ? _noSelection() : _layerSection(context, sel),
+                builder: () => sel == null ? [_noSelection()] : _layerSection(context, sel),
               ),
               _Section(
                 key: const ValueKey('add'),
