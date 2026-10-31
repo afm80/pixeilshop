@@ -48,6 +48,7 @@ if 'kotlin.jvm.target.validation.mode' not in txt:
     txt += 'kotlin.jvm.target.validation.mode=warning\n'
     gp.write_text(txt, encoding='utf-8')
 print('gradle.properties patched')
+<<<<<<< HEAD
 
 # أيقونة التطبيق: ننسخ مجلدات mipmap الجاهزة (عادية + Adaptive) فوق الأيقونة الافتراضية.
 src = pathlib.Path(__file__).parent / 'android_res'
@@ -55,3 +56,5 @@ dst = pathlib.Path('android/app/src/main/res')
 if src.exists():
     shutil.copytree(src, dst, dirs_exist_ok=True)
     print('launcher icons copied')
+=======
+>>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb

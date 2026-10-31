@@ -50,4 +50,7 @@ flutter:
   assets:
     - assets/models/
     - assets/google_fonts/
+<<<<<<< HEAD
     - assets/images/
+=======
+>>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
