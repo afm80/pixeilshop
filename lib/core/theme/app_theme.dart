@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const bg = Color(0xFF0E0F13);
-  static const panel = Color(0xFF171921);
-  static const panel2 = Color(0xFF20232D);
-  static const accent = Color(0xFF8B6CFF);
-  static const accent2 = Color(0xFF36D1C4);
-  static const text = Color(0xFFF2F3F7);
-  static const muted = Color(0xFF9AA0B2);
+  static const bg = Color(0xFF282828);
+  static const panel = Color(0xFF252525);
+  static const panel2 = Color(0xFF343434);
+  static const accent = Color(0xFFF39B00);
+  static const accent2 = Color(0xFFFFC400);
+  static const text = Color(0xFFEDEDED);
+  static const muted = Color(0xFF9A9A9A);
   static const danger = Color(0xFFFF5C6C);
 }
 

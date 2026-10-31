@@ -8,3 +8,6 @@ ios/
 pubspec.lock
 *.iml
 .idea/
+
+# خطوط تُنزَّل أثناء البناء (tool/fetch_fonts.py)
+assets/google_fonts/*.ttf

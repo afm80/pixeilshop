@@ -13,20 +13,16 @@ import '../../../core/theme/app_theme.dart';
 import '../../ai_copilot/bloc/copilot_bloc.dart';
 import '../../ai_copilot/command_executor.dart';
 import '../../ai_copilot/command_parser.dart';
-import '../../ai_copilot/ui/copilot_bar.dart';
 import '../../anime_morph/bloc/anime_bloc.dart';
 import '../../background_remover/background_remover_service.dart';
 import '../../background_remover/bloc/subject_segmentation_bloc.dart';
-import '../../color_grading/ui/grading_panel.dart';
 import '../bloc/canvas_bloc.dart';
 import '../model/doc.dart';
 import '../model/layer.dart';
-import 'add_panel.dart';
-import 'background_panel.dart';
 import 'canvas_view.dart';
+import 'editor_panel.dart';
+import 'editor_toolbar.dart';
 import 'export_sheet.dart';
-import 'layer_panel.dart';
-import 'layers_list_panel.dart';
 
 /// startTool: '' | 'rmbg' | 'anime' | 'grade'
 class EditorPage extends StatefulWidget {
@@ -46,6 +42,7 @@ class _EditorPageState extends State<EditorPage> {
   late final CommandExecutor exec;
   final ImageStore images = ImageStore();
   final EditorController controller = EditorController();
+  final ValueNotifier<String?> popup = ValueNotifier<String?>(null);
   Timer? _saveTimer;
   BuildContext? _innerContext;
 
@@ -75,7 +72,7 @@ class _EditorPageState extends State<EditorPage> {
           _toast(exec.execute(const StyleCmd(StyleKind.anime)));
           break;
         case 'grade':
-          controller.setTab(2);
+          popup.value = 'color';
           break;
       }
     });
@@ -89,6 +86,7 @@ class _EditorPageState extends State<EditorPage> {
     anime.close();
     copilot.close();
     controller.dispose();
+    popup.dispose();
     images.dispose();
     super.dispose();
   }
@@ -98,6 +96,12 @@ class _EditorPageState extends State<EditorPage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 3)));
+  }
+
+  /// نفك الصورة الجديدة أولاً ثم نستبدلها، فلا يظهر إطار فارغ أو قفزة.
+  Future<void> _replaceImage(String layerId, ImageResult result) async {
+    await images.ensure(result.path);
+    if (mounted) canvas.add(ImageReplaced(layerId, result));
   }
 
   void _scheduleSave() {
@@ -146,7 +150,7 @@ class _EditorPageState extends State<EditorPage> {
             listenWhen: (a, b) => a.serial != b.serial,
             listener: (context, st) {
               if (st.status == RemoverStatus.success && st.result != null && st.layerId != null) {
-                canvas.add(ImageReplaced(st.layerId!, st.result!));
+                _replaceImage(st.layerId!, st.result!);
               }
               if (st.status != RemoverStatus.working) _toast(st.message);
             },
@@ -155,7 +159,7 @@ class _EditorPageState extends State<EditorPage> {
             listenWhen: (a, b) => a.serial != b.serial,
             listener: (context, st) {
               if (st.status == AnimeStatus.success && st.result != null && st.layerId != null) {
-                canvas.add(ImageReplaced(st.layerId!, st.result!));
+                _replaceImage(st.layerId!, st.result!);
               }
               if (st.status != AnimeStatus.working) _toast(st.message);
             },
@@ -177,6 +181,8 @@ class _EditorPageState extends State<EditorPage> {
           child: Builder(builder: (ctx) {
             _innerContext = ctx;
             return Scaffold(
+              // لوحة المفاتيح (محرر النص) لا يجب أن تصغّر اللوحة فتقفز العناصر
+              resizeToAvoidBottomInset: false,
               appBar: AppBar(
                 leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 20), onPressed: _persistAndLeave),
                 title: BlocBuilder<CanvasBloc, CanvasState>(
@@ -184,6 +190,8 @@ class _EditorPageState extends State<EditorPage> {
                   builder: (context, st) => Text(st.doc.name, style: const TextStyle(fontSize: 16)),
                 ),
                 actions: [
+                  IconButton(tooltip: 'الطبقات', onPressed: () => popup.value = popup.value == 'layers' ? null : 'layers', icon: const Icon(Icons.layers_outlined)),
+                  IconButton(tooltip: 'إضافة', onPressed: () => popup.value = 'add', icon: const Icon(Icons.add_circle, color: AppColors.accent)),
                   BlocBuilder<CanvasBloc, CanvasState>(
                     builder: (context, st) => Row(children: [
                       IconButton(
@@ -211,84 +219,33 @@ class _EditorPageState extends State<EditorPage> {
               body: Column(
                 children: [
                   Expanded(
-                    child: CanvasView(
-                      images: images,
+                    child: Stack(
+                      children: [
+                        const Positioned.fill(child: CustomPaint(painter: DotsPainter())),
+                        Positioned.fill(
+                          child: CanvasView(
+                            images: images,
+                            controller: controller,
+                            onEditText: () => _editSelectedText(ctx),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SafeArea(
+                    top: false,
+                    child: EditorBottom(
                       controller: controller,
+                      images: images,
+                      popup: popup,
+                      onEditNewText: () => Future.delayed(const Duration(milliseconds: 120), () => _editSelectedText(ctx)),
                       onEditText: () => _editSelectedText(ctx),
                     ),
                   ),
-                  const CopilotBar(),
-                  SizedBox(
-                    height: 268,
-                    child: ColoredBox(
-                      color: AppColors.panel,
-                      child: ListenableBuilder(
-                        listenable: controller,
-                        builder: (context, _) => switch (controller.tab) {
-                          0 => AddPanel(onEditNewText: () => Future.delayed(const Duration(milliseconds: 120), () => _editSelectedText(ctx))),
-                          1 => LayerPanel(controller: controller),
-                          2 => const GradingPanel(),
-                          3 => const BackgroundPanel(),
-                          _ => const LayersListPanel(),
-                        },
-                      ),
-                    ),
-                  ),
-                  _TabBar(controller: controller),
                 ],
               ),
             );
           }),
-        ),
-      ),
-    );
-  }
-}
-
-class _TabBar extends StatelessWidget {
-  const _TabBar({required this.controller});
-  final EditorController controller;
-
-  static const _tabs = <(IconData, String)>[
-    (Icons.add_circle_outline, 'إضافة'),
-    (Icons.tune, 'الطبقة'),
-    (Icons.color_lens_outlined, 'الألوان'),
-    (Icons.wallpaper, 'الخلفية'),
-    (Icons.layers_outlined, 'الطبقات'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.bg,
-      child: SafeArea(
-        top: false,
-        child: ListenableBuilder(
-          listenable: controller,
-          builder: (context, _) => Row(
-            children: [
-              for (int i = 0; i < _tabs.length; i++)
-                Expanded(
-                  child: InkWell(
-                    onTap: () => controller.setTab(i),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(_tabs[i].$1, size: 22, color: controller.tab == i ? AppColors.accent : AppColors.muted),
-                          const SizedBox(height: 2),
-                          Text(
-                            _tabs[i].$2,
-                            style: TextStyle(fontSize: 11, color: controller.tab == i ? AppColors.accent : AppColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
         ),
       ),
     );

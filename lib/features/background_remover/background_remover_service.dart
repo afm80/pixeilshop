@@ -45,7 +45,7 @@ class BackgroundRemoverService {
       mh = px.h;
     }
 
-    final out = await compute(applyMask, MaskJob(px.rgba, px.w, px.h, conf, mw, mh));
+    final out = await compute(applyMask, MaskJob(px.rgba, px.w, px.h, conf!, mw, mh));
     final ref = await MediaService.savePixels(out.rgba, out.w, out.h, prefix: 'cutout');
     return CutoutResult(
       ImageResult(

@@ -56,7 +56,7 @@ class ExportService {
 
   static Future<String> _writeTemp(Uint8List bytes, String ext) async {
     final dir = await getTemporaryDirectory();
-    final path = p.join(dir.path, 'omnistudio_${DateTime.now().millisecondsSinceEpoch}.$ext');
+    final path = p.join(dir.path, 'pixeilshop_${DateTime.now().millisecondsSinceEpoch}.$ext');
     await File(path).writeAsBytes(bytes, flush: true);
     return path;
   }
@@ -67,7 +67,7 @@ class ExportService {
     if (!await Gal.hasAccess()) {
       await Gal.requestAccess();
     }
-    await Gal.putImage(path, album: 'OmniStudio');
+    await Gal.putImage(path, album: 'PixeilShop');
     return path;
   }
 

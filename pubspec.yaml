@@ -1,5 +1,5 @@
-name: omnistudio_ai
-description: OmniStudio AI Free - استوديو تصميم وتحرير صور بمعالجة محلية على الجهاز، مجاني 100%
+name: pixeilshop
+description: PixeilShop - استوديو تصميم وتحرير صور بمعالجة محلية على الجهاز، مجاني 100%
 publish_to: none
 version: 1.0.0+1
 
@@ -25,6 +25,7 @@ dependencies:
 
   # Media / storage / export
   image_picker: ^1.1.2
+  file_picker: ^8.1.6
   path_provider: ^2.1.5
   path: ^1.9.0
   hive_flutter: ^1.1.0
@@ -37,7 +38,6 @@ dependencies:
   google_mlkit_commons: any
   google_mlkit_subject_segmentation: any
   google_mlkit_selfie_segmentation: any
-  tflite_flutter: ^0.11.0
   speech_to_text: ^7.0.0
 
 dev_dependencies:
@@ -49,3 +49,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/models/
+    - assets/google_fonts/
+    - assets/images/

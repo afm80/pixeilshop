@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show TextSelection;
 
 import '../../features/poster_builder/model/doc.dart';
 import '../../features/poster_builder/model/layer.dart';
@@ -90,6 +91,17 @@ void _paintBackground(Canvas c, Doc d, ImageStore images, Rect rect) {
           ),
       );
       break;
+    case 4:
+      c.drawRect(
+        rect,
+        Paint()
+          ..shader = ui.Gradient.radial(
+            rect.center,
+            math.max(d.w, d.h) / 2,
+            [Color(d.bgColor1), Color(d.bgColor2)],
+          ),
+      );
+      break;
     case 2:
       final img = images.get(d.bgPath);
       if (img != null) {
@@ -123,19 +135,26 @@ void _paintLayer(Canvas c, Layer l, ImageStore images) {
       ..blendMode = kBlends[l.blend.clamp(0, kBlends.length - 1).toInt()].mode
       ..color = Color.fromRGBO(255, 255, 255, l.opacity.clamp(0.0, 1.0).toDouble());
     if (hasAdj) p.colorFilter = ColorFilter.matrix(ColorMatrices.forAdjust(l.adj));
-    final extra = l.shOn ? l.shBlur * 3 + math.max(l.shDx.abs(), l.shDy.abs()) + 24 : 6.0;
-    c.saveLayer(bounds.inflate(extra + (l.type == LayerType.text && l.boxOn ? l.fontSize : 0)), p);
+    var extra = l.shOn ? l.shBlur * 3 + math.max(l.shDx.abs(), l.shDy.abs()) + 24 : 6.0;
+    if (l.type == LayerType.text) {
+      if (l.boxOn) extra += l.fontSize;
+      if (l.reflOn) extra += bounds.height + l.reflGap + l.fontSize;
+    }
+    c.saveLayer(bounds.inflate(extra), p);
   }
 
   switch (l.type) {
     case LayerType.text:
-      _drawText(c, l, bounds);
+      _drawText(c, l, images, bounds);
       break;
     case LayerType.image:
       _drawImageLayer(c, l, images, bounds);
       break;
     case LayerType.shape:
-      _withShadow(c, l, bounds, () => _drawShape(c, l, bounds));
+      _withShadow(c, l, bounds, () => _drawShape(c, l, images, bounds));
+      break;
+    case LayerType.draw:
+      _withShadow(c, l, bounds, () => _drawBrush(c, l, bounds));
       break;
   }
 
@@ -173,7 +192,107 @@ void _withShadow(Canvas c, Layer l, Rect bounds, void Function() draw) {
   draw();
 }
 
-void _drawText(Canvas c, Layer l, Rect bounds) {
+// ───────────────────────── التعبئات (لون / تدرج / نقشة / صورة) ─────────────────────────
+
+final Map<String, ui.Image> _tiles = {};
+
+/// بلاطة نقشة صغيرة تُرسم مرة واحدة وتُكرَّر (rasterize متزامن).
+ui.Image _patternTile(int kind, double size, int c1, int c2) {
+  final px = math.max(8, size.round());
+  final key = '$kind|$px|$c1|$c2';
+  final cached = _tiles[key];
+  if (cached != null) return cached;
+  final t = px.toDouble();
+  final rec = ui.PictureRecorder();
+  final c = Canvas(rec);
+  final fg = Paint()
+    ..color = Color(c1)
+    ..isAntiAlias = true;
+  c.drawRect(Rect.fromLTWH(0, 0, t, t), Paint()..color = Color(c2));
+  switch (kind) {
+    case 0: // خطوط أفقية
+      c.drawRect(Rect.fromLTWH(0, 0, t, t / 2), fg);
+      break;
+    case 1: // نقاط
+      c.drawCircle(Offset(t / 2, t / 2), t * 0.28, fg);
+      break;
+    case 2: // شبكة
+      c.drawRect(Rect.fromLTWH(0, 0, t, t * 0.12), fg);
+      c.drawRect(Rect.fromLTWH(0, 0, t * 0.12, t), fg);
+      break;
+    case 3: // رقعة شطرنج
+      c.drawRect(Rect.fromLTWH(0, 0, t / 2, t / 2), fg);
+      c.drawRect(Rect.fromLTWH(t / 2, t / 2, t / 2, t / 2), fg);
+      break;
+    default: // خطوط مائلة
+      final lp = Paint()
+        ..color = Color(c1)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = t * 0.22
+        ..isAntiAlias = true;
+      c.drawLine(Offset(-t * 0.1, t * 1.1), Offset(t * 1.1, -t * 0.1), lp);
+      c.drawLine(Offset(-t * 0.6, t * 0.6), Offset(t * 0.6, -t * 0.6), lp);
+      c.drawLine(Offset(t * 0.4, t * 1.6), Offset(t * 1.6, t * 0.4), lp);
+      break;
+  }
+  final img = rec.endRecording().toImageSync(px, px);
+  if (_tiles.length > 40) _tiles.clear();
+  _tiles[key] = img;
+  return img;
+}
+
+Float64List _mat(double sx, double sy, double tx, double ty) =>
+    Float64List.fromList([sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, 1, 0, tx, ty, 0, 1]);
+
+/// شيدر تعبئة الطبقة داخل [b] (null = لون صلب أو صورة التعبئة لم تُحمَّل بعد).
+ui.Shader? fillShader(Layer l, Rect b, ImageStore images) {
+  switch (l.fillKind) {
+    case 1:
+      final a = l.gradAngle * math.pi / 180;
+      final half = Offset(math.cos(a) * b.width / 2, math.sin(a) * b.height / 2);
+      return ui.Gradient.linear(b.center - half, b.center + half, [Color(l.grad1), Color(l.grad2)]);
+    case 2:
+      return ui.Gradient.radial(b.center, math.max(b.width, b.height) / 2, [Color(l.grad1), Color(l.grad2)]);
+    case 3:
+      final tile = _patternTile(l.fillPattern, l.patSize, l.grad1, l.grad2);
+      final k = math.max(8.0, l.patSize) / tile.width;
+      return ui.ImageShader(tile, TileMode.repeated, TileMode.repeated, _mat(k, k, b.left, b.top));
+    case 4:
+      final img = images.get(l.fillPath);
+      if (img == null) return null;
+      final k = math.max(b.width / img.width, b.height / img.height);
+      return ui.ImageShader(
+        img,
+        TileMode.clamp,
+        TileMode.clamp,
+        _mat(k, k, b.left + (b.width - img.width * k) / 2, b.top + (b.height - img.height * k) / 2),
+        filterQuality: FilterQuality.high,
+      );
+    default:
+      return null;
+  }
+}
+
+/// يرسم مساراً بخط عادي أو متقطع.
+void _strokePath(Canvas c, Path path, Paint paint, bool dashed, double dash) {
+  if (!dashed) {
+    c.drawPath(path, paint);
+    return;
+  }
+  final d = math.max(2.0, dash);
+  final gap = d * 0.6;
+  for (final m in path.computeMetrics()) {
+    double at = 0;
+    while (at < m.length) {
+      c.drawPath(m.extractPath(at, math.min(at + d, m.length)), paint);
+      at += d + gap;
+    }
+  }
+}
+
+// ───────────────────────── النص ─────────────────────────
+
+void _drawText(Canvas c, Layer l, ImageStore images, Rect bounds) {
   void body() {
     if (l.boxOn) {
       final pad = l.fontSize * 0.3;
@@ -183,17 +302,19 @@ void _drawText(Canvas c, Layer l, Rect bounds) {
       );
     }
     final topLeft = Offset(-bounds.width / 2, -bounds.height / 2);
+    if (l.hlOn) _highlightText(c, l, topLeft);
     if (l.strokeW > 0) {
       TextMetrics.build(l, stroke: true).paint(c, topLeft);
     }
-    if (l.gradOn) {
+    final shader = l.fillKind == 0 ? null : fillShader(l, bounds, images);
+    if (shader != null) {
       c.saveLayer(bounds.inflate(4), Paint());
       TextMetrics.build(l, stroke: false, whiteFill: true).paint(c, topLeft);
       c.drawRect(
         bounds.inflate(4),
         Paint()
           ..blendMode = BlendMode.srcIn
-          ..shader = ui.Gradient.linear(bounds.topCenter, bounds.bottomCenter, [Color(l.grad1), Color(l.grad2)]),
+          ..shader = shader,
       );
       c.restore();
     } else {
@@ -201,8 +322,54 @@ void _drawText(Canvas c, Layer l, Rect bounds) {
     }
   }
 
-  _withShadow(c, l, bounds, body);
+  void withReflection() {
+    body();
+    if (!l.reflOn) return;
+    final b = bounds.bottom;
+    final area = bounds.inflate(l.fontSize * 0.5);
+    c.save();
+    c.translate(0, l.reflGap);
+    c.translate(0, b);
+    c.scale(1, -1);
+    c.translate(0, -b);
+    c.saveLayer(area, Paint());
+    body();
+    c.drawRect(
+      area,
+      Paint()
+        ..blendMode = BlendMode.dstIn
+        ..shader = ui.Gradient.linear(
+          Offset(0, bounds.bottom),
+          Offset(0, bounds.top),
+          [Color.fromRGBO(255, 255, 255, l.reflOpacity.clamp(0.0, 1.0).toDouble()), const Color(0x00FFFFFF)],
+        ),
+    );
+    c.restore();
+    c.restore();
+  }
+
+  _withShadow(c, l, bounds, withReflection);
 }
+
+/// تظليل النص (highlight): مستطيل مستدير خلف كل سطر.
+void _highlightText(Canvas c, Layer l, Offset topLeft) {
+  final tp = TextMetrics.build(l, stroke: false);
+  final len = tp.text?.toPlainText().length ?? 0;
+  if (len == 0) return;
+  final boxes = tp.getBoxesForSelection(TextSelection(baseOffset: 0, extentOffset: len));
+  final paint = Paint()
+    ..color = Color(l.hlColor)
+    ..isAntiAlias = true;
+  final grow = l.fontSize * 0.06;
+  for (final b in boxes) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(b.toRect().shift(topLeft).inflate(grow), Radius.circular(l.fontSize * 0.12)),
+      paint,
+    );
+  }
+}
+
+// ───────────────────────── الصور ─────────────────────────
 
 void _drawImageLayer(Canvas c, Layer l, ImageStore images, Rect bounds) {
   final img = images.get(l.path);
@@ -210,8 +377,12 @@ void _drawImageLayer(Canvas c, Layer l, ImageStore images, Rect bounds) {
     c.drawRect(bounds, Paint()..color = const Color(0x33FFFFFF));
     return;
   }
+  final radius = l.cornerRadius.clamp(0.0, math.min(bounds.width, bounds.height) / 2).toDouble();
+  final rr = RRect.fromRectAndRadius(bounds, Radius.circular(radius));
+
   void body() {
     c.saveLayer(bounds, Paint());
+    if (radius > 0) c.clipRRect(rr, doAntiAlias: true);
     c.drawImageRect(
       img,
       coverSrc(img.width.toDouble(), img.height.toDouble(), l.w, l.h),
@@ -247,9 +418,63 @@ void _drawImageLayer(Canvas c, Layer l, ImageStore images, Rect bounds) {
       c.drawPath(path, p);
     }
     c.restore();
+    // إطار الصورة (متصل أو متقطع) داخل حافتها
+    if (l.strokeW > 0) {
+      final inset = rr.deflate(l.strokeW / 2);
+      _strokePath(
+        c,
+        Path()..addRRect(inset),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = l.strokeW
+          ..strokeJoin = StrokeJoin.round
+          ..isAntiAlias = true
+          ..color = Color(l.strokeColor),
+        l.dashed,
+        l.dashLen,
+      );
+    }
   }
 
   _withShadow(c, l, bounds, body);
+}
+
+// ───────────────────────── الرسم الحر (فرشاة) ─────────────────────────
+
+Path _smoothPath(List<double> pts) {
+  final n = pts.length ~/ 2;
+  final path = Path()..moveTo(pts[0], pts[1]);
+  for (int i = 1; i < n - 1; i++) {
+    final mx = (pts[2 * i] + pts[2 * i + 2]) / 2, my = (pts[2 * i + 1] + pts[2 * i + 3]) / 2;
+    path.quadraticBezierTo(pts[2 * i], pts[2 * i + 1], mx, my);
+  }
+  path.lineTo(pts[2 * (n - 1)], pts[2 * (n - 1) + 1]);
+  return path;
+}
+
+void _drawBrush(Canvas c, Layer l, Rect bounds) {
+  c.saveLayer(bounds, Paint());
+  for (final s in l.strokes) {
+    if (s.pts.length < 2) continue;
+    if (s.pts.length < 4) {
+      final dot = Paint()
+        ..isAntiAlias = true
+        ..color = Color(s.color);
+      if (s.erase) dot.blendMode = BlendMode.clear;
+      c.drawCircle(Offset(s.pts[0], s.pts[1]), s.width / 2, dot);
+      continue;
+    }
+    final p = Paint()
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = s.width
+      ..color = Color(s.color);
+    if (s.erase) p.blendMode = BlendMode.clear;
+    _strokePath(c, _smoothPath(s.pts), p, s.dashed, s.width * 2.5);
+  }
+  c.restore();
 }
 
 Path shapePath(Layer l, Rect b) {
@@ -300,23 +525,28 @@ Path shapePath(Layer l, Rect b) {
   return p;
 }
 
-void _drawShape(Canvas c, Layer l, Rect bounds) {
+void _drawShape(Canvas c, Layer l, ImageStore images, Rect bounds) {
   final path = shapePath(l, bounds);
   final fill = Paint()..isAntiAlias = true;
-  if (l.gradOn) {
-    fill.shader = ui.Gradient.linear(bounds.topLeft, bounds.bottomRight, [Color(l.grad1), Color(l.grad2)]);
+  final shader = l.fillKind == 0 ? null : fillShader(l, bounds, images);
+  if (shader != null) {
+    fill.shader = shader;
   } else {
     fill.color = Color(l.color);
   }
   c.drawPath(path, fill);
   if (l.strokeW > 0) {
-    c.drawPath(
+    _strokePath(
+      c,
       path,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = l.strokeW
         ..strokeJoin = StrokeJoin.round
+        ..isAntiAlias = true
         ..color = Color(l.strokeColor),
+      l.dashed,
+      l.dashLen,
     );
   }
 }

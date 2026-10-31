@@ -17,7 +17,7 @@ class ProjectMeta {
 
 /// تخزين المشاريع محلياً عبر Hive (JSON لكل مشروع).
 class StorageService {
-  static const _boxName = 'omnistudio_projects';
+  static const _boxName = 'pixeilshop_projects';
   static Box<String>? _box;
 
   static Future<void> init() async {

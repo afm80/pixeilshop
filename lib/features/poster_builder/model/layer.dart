@@ -3,7 +3,8 @@ import 'dart:ui';
 
 import 'adjust.dart';
 
-enum LayerType { text, image, shape }
+/// draw = طبقة رسم حر (فرشاة). يُضاف في النهاية للحفاظ على فهارس المشاريع المحفوظة.
+enum LayerType { text, image, shape, draw }
 
 enum ShapeKind { rect, circle, triangle, star, diamond, line }
 
@@ -17,6 +18,26 @@ class EraseStroke {
   factory EraseStroke.fromJson(Map<String, dynamic> m) => EraseStroke(
         (m['r'] as num).toDouble(),
         (m['p'] as List).map((e) => (e as num).toDouble()).toList(),
+      );
+}
+
+/// ضربة فرشاة. النقاط x0,y0,x1,y1... بإحداثيات محلية (مركز الطبقة = صفر).
+class BrushStroke {
+  BrushStroke({required this.color, required this.width, this.erase = false, this.dashed = false, List<double>? pts})
+      : pts = pts ?? <double>[];
+  final int color;
+  final double width;
+  final bool erase; // ممحاة (BlendMode.clear) داخل طبقة الرسم
+  final bool dashed;
+  final List<double> pts;
+
+  Map<String, dynamic> toJson() => {'c': color, 'w': width, 'e': erase, 'd': dashed, 'p': pts};
+  factory BrushStroke.fromJson(Map<String, dynamic> m) => BrushStroke(
+        color: (m['c'] as num).toInt(),
+        width: (m['w'] as num).toDouble(),
+        erase: (m['e'] as bool?) ?? false,
+        dashed: (m['d'] as bool?) ?? false,
+        pts: ((m['p'] as List?) ?? const []).map((e) => (e as num).toDouble()).toList(),
       );
 }
 
@@ -61,8 +82,38 @@ class Layer {
   bool boxOn = false;
   int boxColor = 0xFF000000;
   double boxRadius = 24;
-  bool gradOn = false;
-  int grad1 = 0xFFFFD54F, grad2 = 0xFFFF5252;
+  /// نوع التعبئة: 0 لون، 1 تدرج خطي، 2 تدرج دائري، 3 نقشة، 4 صورة.
+  int fillKind = 0;
+  bool get gradOn => fillKind == 1 || fillKind == 2;
+  set gradOn(bool v) {
+    if (v) {
+      if (!gradOn) fillKind = 1;
+    } else {
+      fillKind = 0;
+    }
+  }
+
+  int grad1 = 0xFFFFD54F, grad2 = 0xFFFF5252; // ألوان التدرج، وهي ألوان النقشة أيضاً
+  double gradAngle = 90;
+  int fillPattern = 0; // 0 خطوط، 1 نقاط، 2 شبكة، 3 رقعة شطرنج، 4 مائل
+  double patSize = 40;
+  String? fillPath; // صورة التعبئة
+
+  // خط متقطع (حدود الأشكال والصور)
+  bool dashed = false;
+  double dashLen = 18;
+
+  // تظليل النص (highlight) وانعكاسه
+  bool hlOn = false;
+  int hlColor = 0xFFFFEB3B;
+  bool reflOn = false;
+  double reflOpacity = 0.4, reflGap = 6;
+
+  /// طبقات تحمل نفس المعرّف تتحرك وتتحول معاً.
+  String? groupId;
+
+  // رسم حر
+  List<BrushStroke> strokes = [];
 
   // صورة
   String? path;
@@ -137,6 +188,20 @@ class Layer {
         'bc': boxColor,
         'br': boxRadius,
         'go': gradOn,
+        'fk': fillKind,
+        'ga': gradAngle,
+        'fp': fillPattern,
+        'ps': patSize,
+        'fpath': fillPath,
+        'ds': dashed,
+        'dl': dashLen,
+        'hl': hlOn,
+        'hc': hlColor,
+        'rf': reflOn,
+        'ro': reflOpacity,
+        'rg': reflGap,
+        'gid': groupId,
+        'bs': strokes.map((e) => e.toJson()).toList(),
         'g1': grad1,
         'g2': grad2,
         'p': path,
@@ -187,7 +252,22 @@ class Layer {
     l.boxOn = b('bo', false);
     l.boxColor = i('bc', 0xFF000000);
     l.boxRadius = d('br', 24);
-    l.gradOn = b('go', false);
+    l.fillKind = i('fk', b('go', false) ? 1 : 0);
+    l.gradAngle = d('ga', l.type == LayerType.shape ? 45 : 90);
+    l.fillPattern = i('fp', 0);
+    l.patSize = d('ps', 40);
+    l.fillPath = m['fpath'] as String?;
+    l.dashed = b('ds', false);
+    l.dashLen = d('dl', 18);
+    l.hlOn = b('hl', false);
+    l.hlColor = i('hc', 0xFFFFEB3B);
+    l.reflOn = b('rf', false);
+    l.reflOpacity = d('ro', 0.4);
+    l.reflGap = d('rg', 6);
+    l.groupId = m['gid'] as String?;
+    l.strokes = ((m['bs'] as List?) ?? const [])
+        .map((e) => BrushStroke.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
     l.grad1 = i('g1', 0xFFFFD54F);
     l.grad2 = i('g2', 0xFFFF5252);
     l.path = m['p'] as String?;

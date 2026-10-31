@@ -46,6 +46,7 @@ class ImageStore extends ChangeNotifier {
     if (d.bgKind == 2 && d.bgPath != null) paths.add(d.bgPath!);
     for (final l in d.layers) {
       if (l.type == LayerType.image && l.path != null) paths.add(l.path!);
+      if (l.fillKind == 4 && l.fillPath != null) paths.add(l.fillPath!);
     }
     await Future.wait(paths.map(ensure));
   }

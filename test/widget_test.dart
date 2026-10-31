@@ -1,9 +1,9 @@
 import 'dart:ui' show Offset;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:omnistudio_ai/core/services/tflite_service.dart';
-import 'package:omnistudio_ai/features/ai_copilot/command_parser.dart';
-import 'package:omnistudio_ai/features/poster_builder/model/layer.dart';
+import 'package:pixeilshop/core/services/tflite_service.dart';
+import 'package:pixeilshop/features/ai_copilot/command_parser.dart';
+import 'package:pixeilshop/features/poster_builder/model/layer.dart';
 
 void main() {
   group('CommandParser', () {
@@ -63,6 +63,34 @@ void main() {
       final back = l.docToLocal(d);
       expect(back.dx, closeTo(40, 1e-6));
       expect(back.dy, closeTo(-25, 1e-6));
+    });
+  });
+
+  group('Layer serialization', () {
+    test('new fields survive a JSON round trip', () {
+      final l = Layer.create(LayerType.draw)
+        ..fillKind = 3
+        ..fillPattern = 2
+        ..groupId = 'g1'
+        ..dashed = true
+        ..hlOn = true
+        ..reflOn = true
+        ..strokes = [BrushStroke(color: 0xFF112233, width: 9, dashed: true, pts: [1, 2, 3, 4])];
+      final b = Layer.fromJson(l.toJson());
+      expect(b.type, LayerType.draw);
+      expect(b.fillKind, 3);
+      expect(b.fillPattern, 2);
+      expect(b.groupId, 'g1');
+      expect(b.dashed && b.hlOn && b.reflOn, isTrue);
+      expect(b.strokes.single.pts, [1, 2, 3, 4]);
+      expect(b.strokes.single.dashed, isTrue);
+    });
+
+    test('old projects (gradOn only) still load as linear gradient', () {
+      final j = Layer.create(LayerType.text).toJson()
+        ..remove('fk')
+        ..['go'] = true;
+      expect(Layer.fromJson(j).fillKind, 1);
     });
   });
 }
