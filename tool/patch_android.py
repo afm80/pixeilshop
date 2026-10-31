@@ -55,3 +55,48 @@ dst = pathlib.Path('android/app/src/main/res')
 if src.exists():
     shutil.copytree(src, dst, dirs_exist_ok=True)
     print('launcher icons copied')
+
+
+# بعض الإضافات (مثل file_picker) تُترجَم بـ compileSdk 34 بينما مكتبة lifecycle تتطلب 36.
+# نفرض compileSdk=36 على كل الإضافات (ما عدا app) في ملف gradle الجذري.
+KTS_FIX = '''
+// PixeilShop: force compileSdk 36 for all plugins
+subprojects {
+    val sdkFix = Action<Project> {
+        try {
+            extensions.findByName("android")?.withGroovyBuilder {
+                setProperty("compileSdk", 36)
+            }
+        } catch (e: Exception) {
+            println("compileSdk fix skipped for " + name + ": " + e.message)
+        }
+    }
+    if (name != "app") {
+        if (state.executed) sdkFix.execute(this) else afterEvaluate(sdkFix)
+    }
+}
+'''
+
+GROOVY_FIX = '''
+// PixeilShop: force compileSdk 36 for all plugins
+subprojects {
+    afterEvaluate { p ->
+        if (p.name != 'app' && p.hasProperty('android')) {
+            try {
+                p.android.compileSdk = 36
+            } catch (Exception e) {
+                println("compileSdk fix skipped for " + p.name)
+            }
+        }
+    }
+}
+'''
+
+for name, fix in (('build.gradle.kts', KTS_FIX), ('build.gradle', GROOVY_FIX)):
+    root = pathlib.Path('android') / name
+    if root.exists():
+        t = root.read_text(encoding='utf-8')
+        if 'PixeilShop: force compileSdk' not in t:
+            root.write_text(t.rstrip('\n') + '\n' + fix, encoding='utf-8')
+        print('compileSdk fix added to', root)
+        break
