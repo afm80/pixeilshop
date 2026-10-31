@@ -70,8 +70,9 @@ class _ExportSheetState extends State<_ExportSheet> {
             for (final f in ExportFormat.values) ChipChoice(label: f.label, selected: _fmt == f, onTap: () => setState(() => _fmt = f)),
           ]),
           const SectionLabel('الدقة'),
-          Row(children: [
-            for (final s in [1.0, 2.0, 3.0]) ChipChoice(label: '${s.toInt()}x', selected: _scale == s, onTap: () => setState(() => _scale = s)),
+          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+            for (final s in [0.5, 1.0, 2.0, 3.0, 4.0])
+              ChipChoice(label: s == s.toInt() ? '${s.toInt()}x' : '${s}x', selected: _scale == s, onTap: () => setState(() => _scale = s)),
             const SizedBox(width: 8),
             Text(_sizeText, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
           ]),
