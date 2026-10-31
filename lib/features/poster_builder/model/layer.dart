@@ -6,7 +6,7 @@ import 'adjust.dart';
 /// draw = طبقة رسم حر (فرشاة). يُضاف في النهاية للحفاظ على فهارس المشاريع المحفوظة.
 enum LayerType { text, image, shape, draw }
 
-enum ShapeKind { rect, circle, triangle, star, diamond, line }
+enum ShapeKind { rect, circle, triangle, star, diamond, line, cone, pentagon, hexagon, heptagon, octagon, nonagon, decagon }
 
 /// ضربة ممحاة (BlendMode.clear) بإحداثيات نسبية لعرض الطبقة.
 class EraseStroke {
@@ -106,6 +106,11 @@ class Layer {
   // تظليل النص (highlight) وانعكاسه
   bool hlOn = false;
   int hlColor = 0xFFFFEB3B;
+  // عمق النص (extrude) وانحناؤه (skew)
+  bool depthOn = false;
+  int depthColor = 0xFF000000;
+  double depthLen = 20, depthAngle = 45;
+  double skewX = 0, skewY = 0; // بالدرجات
   bool reflOn = false;
   double reflOpacity = 0.4, reflGap = 6;
 
@@ -197,6 +202,12 @@ class Layer {
         'dl': dashLen,
         'hl': hlOn,
         'hc': hlColor,
+        'dpo': depthOn,
+        'dpc': depthColor,
+        'dpl': depthLen,
+        'dpa': depthAngle,
+        'skx': skewX,
+        'sky': skewY,
         'rf': reflOn,
         'ro': reflOpacity,
         'rg': reflGap,
@@ -261,6 +272,12 @@ class Layer {
     l.dashLen = d('dl', 18);
     l.hlOn = b('hl', false);
     l.hlColor = i('hc', 0xFFFFEB3B);
+    l.depthOn = b('dpo', false);
+    l.depthColor = i('dpc', 0xFF000000);
+    l.depthLen = d('dpl', 20);
+    l.depthAngle = d('dpa', 45);
+    l.skewX = d('skx', 0);
+    l.skewY = d('sky', 0);
     l.reflOn = b('rf', false);
     l.reflOpacity = d('ro', 0.4);
     l.reflGap = d('rg', 6);

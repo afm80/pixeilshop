@@ -21,6 +21,7 @@ import '../model/doc.dart';
 import '../model/layer.dart';
 import 'canvas_view.dart';
 import 'crop_dialog.dart';
+import 'font_picker.dart';
 
 /// محرر موحّد: يجمع (الطبقة المحددة، الإضافة، الألوان، الخلفية والمقاس، الطبقات)
 /// في لوحة واحدة بأقسام قابلة للطي بدل التبويبات المنفصلة.
@@ -91,6 +92,13 @@ const _shapes = <(String, ShapeKind, IconData)>[
   ('مثلث', ShapeKind.triangle, Icons.change_history),
   ('نجمة', ShapeKind.star, Icons.star_border),
   ('معين', ShapeKind.diamond, Icons.diamond_outlined),
+  ('مخروط', ShapeKind.cone, Icons.filter_alt_outlined),
+  ('خماسي', ShapeKind.pentagon, Icons.pentagon_outlined),
+  ('سداسي', ShapeKind.hexagon, Icons.hexagon_outlined),
+  ('سباعي', ShapeKind.heptagon, Icons.stop_circle_outlined),
+  ('ثماني', ShapeKind.octagon, Icons.stop_outlined),
+  ('تساعي', ShapeKind.nonagon, Icons.circle_outlined),
+  ('عشاري', ShapeKind.decagon, Icons.radio_button_unchecked),
   ('خط', ShapeKind.line, Icons.horizontal_rule),
 ];
 
@@ -118,7 +126,6 @@ typedef _Setter = void Function(void Function(Layer));
 // ───────────────────────── اللوحة الموحدة ─────────────────────────
 
 class EditorPanel extends StatefulWidget {
-<<<<<<< HEAD
   const EditorPanel({super.key, required this.controller, required this.images, required this.onEditNewText, this.only, this.part});
 
   /// عند تحديده يُعرض محتوى هذا القسم فقط ('layer' | 'add' | 'color' | 'bg' | 'layers') بدون ترويسة.
@@ -126,9 +133,6 @@ class EditorPanel extends StatefulWidget {
 
   /// مع only='layer': جزء واحد من خصائص العنصر (color/border/shadow/corners/blend/font/effects/pos).
   final String? part;
-=======
-  const EditorPanel({super.key, required this.controller, required this.images, required this.onEditNewText});
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
   final EditorController controller;
   final ImageStore images;
   final VoidCallback onEditNewText;
@@ -151,7 +155,6 @@ class _EditorPanelState extends State<EditorPanel> {
       builder: (context, _) => BlocBuilder<CanvasBloc, CanvasState>(
         builder: (context, st) {
           final sel = st.selected;
-<<<<<<< HEAD
           final only = widget.only;
           if (only != null) {
             final List<Widget> kids;
@@ -178,8 +181,6 @@ class _EditorPanelState extends State<EditorPanel> {
             }
             return ListView(padding: const EdgeInsets.fromLTRB(14, 4, 14, 16), children: kids);
           }
-=======
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
           return ListView(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
             children: [
@@ -495,7 +496,6 @@ class _EditorPanelState extends State<EditorPanel> {
     ];
   }
 
-<<<<<<< HEAD
   /// جزء واحد من خصائص الطبقة (نافذة منبثقة مستقلة لكل زر في الشريط السفلي).
   List<Widget> _layerPart(BuildContext context, Layer l, String part) {
     final bloc = context.read<CanvasBloc>();
@@ -546,26 +546,32 @@ class _EditorPanelState extends State<EditorPanel> {
             IconButton(onPressed: () => set((x) => x.align = 2), icon: Icon(Icons.format_align_right, color: l.align == 2 ? AppColors.accent : null)),
           ]),
           const SectionLabel('الخط'),
-          Wrap(
-            spacing: 2,
-            runSpacing: 2,
-            children: [
-              ChipChoice(label: 'خط من جهازك', icon: Icons.upload_file, selected: false, onTap: () => _addCustomFont(set)),
-              for (final f in FontService.all)
-                ChipChoice(
-                  label: f,
-                  selected: l.font == f,
-                  onTap: () async {
-                    await FontService.ensure(f);
-                    set((x) => x.font = f);
-                  },
-                ),
-            ],
+          OutlinedButton.icon(
+            onPressed: () async {
+              final f = await showFontPicker(context, l.font);
+              if (f != null) set((x) => x.font = f);
+            },
+            icon: const Icon(Icons.font_download_outlined),
+            label: Text('${l.font}  ·  تغيير الخط'),
           ),
           SliderRow(label: 'حجم الخط', value: l.fontSize, min: 16, max: 400, onStart: start, onChanged: (v) => live((x) => x.fontSize = v), display: (v) => v.round().toString()),
           SliderRow(label: 'عرض الصندوق', value: l.w, min: 80, max: 2400, onStart: start, onChanged: (v) => live((x) => x.w = v), display: (v) => v.round().toString()),
           SliderRow(label: 'تباعد الحروف', value: l.letterSpacing, min: -5, max: 40, onStart: start, onChanged: (v) => live((x) => x.letterSpacing = v), display: (v) => v.toStringAsFixed(0)),
           SliderRow(label: 'ارتفاع السطر', value: l.lineHeight, min: 0.8, max: 2.4, onStart: start, onChanged: (v) => live((x) => x.lineHeight = v)),
+        ];
+      case 'depth':
+        return [
+          _switchRow('تفعيل العمق', l.depthOn, (v) => set((x) => x.depthOn = v)),
+          if (l.depthOn) ...[
+            _colors(l.depthColor, (c) => set((x) => x.depthColor = c)),
+            SliderRow(label: 'العمق', value: l.depthLen, min: 1, max: 80, onStart: start, onChanged: (v) => live((x) => x.depthLen = v), display: (v) => v.round().toString()),
+            SliderRow(label: 'الزاوية', value: l.depthAngle, min: 0, max: 360, onStart: start, onChanged: (v) => live((x) => x.depthAngle = v), display: (v) => '${v.round()}°'),
+          ],
+        ];
+      case 'skew':
+        return [
+          SliderRow(label: 'العرض', value: l.skewX, min: -60, max: 60, onStart: start, onChanged: (v) => live((x) => x.skewX = v), display: (v) => '${v.round()}°'),
+          SliderRow(label: 'الارتفاع', value: l.skewY, min: -60, max: 60, onStart: start, onChanged: (v) => live((x) => x.skewY = v), display: (v) => '${v.round()}°'),
         ];
       case 'effects':
         return [
@@ -600,8 +606,6 @@ class _EditorPanelState extends State<EditorPanel> {
     return const [];
   }
 
-=======
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
   /// تحريك بالبكسل (للمجموعة كلها إن كانت الطبقة ضمن مجموعة).
   Widget _nudgeRow(CanvasBloc bloc, Layer l) {
     void move(double dx, double dy) {

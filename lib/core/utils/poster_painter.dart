@@ -302,6 +302,19 @@ void _drawText(Canvas c, Layer l, ImageStore images, Rect bounds) {
       );
     }
     final topLeft = Offset(-bounds.width / 2, -bounds.height / 2);
+    if (l.depthOn && l.depthLen > 0) {
+      final a = l.depthAngle * math.pi / 180;
+      final steps = l.depthLen.clamp(1.0, 80.0).round();
+      final dx = math.cos(a), dy = math.sin(a);
+      final area = bounds.inflate(l.depthLen + 8);
+      c.saveLayer(area, Paint());
+      final tp = TextMetrics.build(l, stroke: false, whiteFill: true);
+      for (int k = steps; k >= 1; k--) {
+        tp.paint(c, topLeft + Offset(dx * k, dy * k));
+      }
+      c.drawRect(area, Paint()..blendMode = BlendMode.srcIn..color = Color(l.depthColor));
+      c.restore();
+    }
     if (l.hlOn) _highlightText(c, l, topLeft);
     if (l.strokeW > 0) {
       TextMetrics.build(l, stroke: true).paint(c, topLeft);
@@ -348,7 +361,16 @@ void _drawText(Canvas c, Layer l, ImageStore images, Rect bounds) {
     c.restore();
   }
 
-  _withShadow(c, l, bounds, withReflection);
+  if (l.skewX == 0 && l.skewY == 0) {
+    _withShadow(c, l, bounds, withReflection);
+  } else {
+    final tx = math.tan(l.skewX.clamp(-60.0, 60.0) * math.pi / 180);
+    final ty = math.tan(l.skewY.clamp(-60.0, 60.0) * math.pi / 180);
+    c.save();
+    c.transform(Float64List.fromList([1, ty, 0, 0, tx, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]));
+    _withShadow(c, l, bounds, withReflection);
+    c.restore();
+  }
 }
 
 /// تظليل النص (highlight): مستطيل مستدير خلف كل سطر.
@@ -477,6 +499,20 @@ void _drawBrush(Canvas c, Layer l, Rect bounds) {
   c.restore();
 }
 
+void _poly(Path p, Rect b, int n) {
+  final cx = b.center.dx, cy = b.center.dy;
+  for (int i = 0; i < n; i++) {
+    final a = -math.pi / 2 + i * 2 * math.pi / n;
+    final pt = Offset(cx + math.cos(a) * b.width / 2, cy + math.sin(a) * b.height / 2);
+    if (i == 0) {
+      p.moveTo(pt.dx, pt.dy);
+    } else {
+      p.lineTo(pt.dx, pt.dy);
+    }
+  }
+  p.close();
+}
+
 Path shapePath(Layer l, Rect b) {
   final p = Path();
   switch (l.shape) {
@@ -513,6 +549,30 @@ Path shapePath(Layer l, Rect b) {
         }
       }
       p.close();
+      break;
+    case ShapeKind.cone:
+      p.moveTo(b.center.dx, b.top);
+      p.lineTo(b.right, b.bottom - b.height * 0.12);
+      p.arcToPoint(Offset(b.left, b.bottom - b.height * 0.12), radius: Radius.elliptical(b.width / 2, b.height * 0.12), clockwise: true);
+      p.close();
+      break;
+    case ShapeKind.pentagon:
+      _poly(p, b, 5);
+      break;
+    case ShapeKind.hexagon:
+      _poly(p, b, 6);
+      break;
+    case ShapeKind.heptagon:
+      _poly(p, b, 7);
+      break;
+    case ShapeKind.octagon:
+      _poly(p, b, 8);
+      break;
+    case ShapeKind.nonagon:
+      _poly(p, b, 9);
+      break;
+    case ShapeKind.decagon:
+      _poly(p, b, 10);
       break;
     case ShapeKind.line:
       final t = math.max(4.0, b.height * 0.06);

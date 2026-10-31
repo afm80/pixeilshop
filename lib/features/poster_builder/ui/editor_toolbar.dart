@@ -47,6 +47,8 @@ class EditorBottom extends StatelessWidget {
     'p:font': 'الخطوط',
     'p:effects': 'الانعكاس والتظليل',
     'p:pos': 'الموقع',
+    'p:depth': 'العمق',
+    'p:skew': 'الانحناء',
     'p:image': 'قص وتدوير',
   };
 
@@ -78,6 +80,8 @@ class EditorBottom extends StatelessWidget {
             it('p:font', Icons.font_download_outlined, 'الخطوط'),
             it('p:border', Icons.crop_din, 'إحاطة'),
             it('p:effects', Icons.flip_to_back, 'انعكاس'),
+            it('p:depth', Icons.layers_outlined, 'العمق'),
+            it('p:skew', Icons.rotate_90_degrees_ccw, 'انحناء'),
             it('p:corners', Icons.rounded_corner, 'خلفية'),
             it('p:shadow', Icons.blur_on, 'الظل'),
             it('opacity', Icons.opacity, 'الشفافية'),
