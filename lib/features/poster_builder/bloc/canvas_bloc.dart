@@ -119,6 +119,33 @@ class StrokeExtended extends CanvasEvent {
   final double x, y;
 }
 
+/// استبدال صورة طبقة بنتيجة قص/تدوير (تُخبَز في ملف جديد) مع إزاحة المركز.
+class ImageBaked extends CanvasEvent {
+  const ImageBaked(this.id, this.path, this.w, this.h, {this.shiftLocal = Offset.zero});
+  final String id, path;
+  final double w, h;
+  final Offset shiftLocal; // إزاحة المركز بالإحداثيات المحلية للطبقة
+}
+
+class BrushStrokeStarted extends CanvasEvent {
+  const BrushStrokeStarted(this.id, this.stroke);
+  final String id;
+  final BrushStroke stroke;
+}
+
+class BrushStrokeExtended extends CanvasEvent {
+  const BrushStrokeExtended(this.id, this.x, this.y);
+  final String id;
+  final double x, y;
+}
+
+/// تجميع طبقات تحت معرّف واحد (أو فك التجميع عند [group] = false).
+class LayersGrouped extends CanvasEvent {
+  const LayersGrouped(this.ids, {this.group = true});
+  final Set<String> ids;
+  final bool group;
+}
+
 class FontsReady extends CanvasEvent {
   const FontsReady();
 }
@@ -191,6 +218,7 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       l.w = e.kind == ShapeKind.line ? d.w * 0.5 : s;
       l.h = e.kind == ShapeKind.line ? 40 : s;
       l.color = e.color ?? 0xFF8B6CFF;
+      l.gradAngle = 45;
       d.layers.add(l);
       _emit(emit, selectedId: l.id);
     });
@@ -246,6 +274,7 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       final c = l.clone(newId: true);
       c.x += 40;
       c.y += 40;
+      c.groupId = null;
       state.doc.layers.insert(state.doc.indexOf(l.id) + 1, c);
       _emit(emit, selectedId: c.id);
     });
@@ -313,6 +342,41 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       final l = state.doc.byId(e.id);
       if (l == null || l.erase.isEmpty) return;
       l.erase.last.pts.addAll([e.x, e.y]);
+      _emit(emit);
+    });
+    on<ImageBaked>((e, emit) {
+      final l = state.doc.byId(e.id);
+      if (l == null) return;
+      _checkpoint();
+      final shift = l.localToDoc(e.shiftLocal);
+      l.x = shift.dx;
+      l.y = shift.dy;
+      l.w = e.w;
+      l.h = e.h;
+      l.path = e.path;
+      l.erase = [];
+      _emit(emit);
+    });
+    on<BrushStrokeStarted>((e, emit) {
+      final l = state.doc.byId(e.id);
+      if (l == null) return;
+      _checkpoint();
+      l.strokes.add(e.stroke);
+      _emit(emit);
+    });
+    on<BrushStrokeExtended>((e, emit) {
+      final l = state.doc.byId(e.id);
+      if (l == null || l.strokes.isEmpty) return;
+      l.strokes.last.pts.addAll([e.x, e.y]);
+      _emit(emit);
+    });
+    on<LayersGrouped>((e, emit) {
+      if (e.group && e.ids.length < 2) return;
+      _checkpoint();
+      final gid = 'g${DateTime.now().microsecondsSinceEpoch}';
+      for (final l in state.doc.layers) {
+        if (e.ids.contains(l.id)) l.groupId = e.group ? gid : null;
+      }
       _emit(emit);
     });
     on<FontsReady>((e, emit) {
