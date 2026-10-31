@@ -90,9 +90,12 @@ Future<Color?> showColorPicker(BuildContext context, Color initial) async {
 
 /// صف ألوان سريعة + زر منتقي ألوان كامل.
 class ColorRow extends StatelessWidget {
-  const ColorRow({super.key, required this.selected, required this.onPick});
+  const ColorRow({super.key, required this.selected, required this.onPick, this.onEyedropper});
   final int selected;
   final ValueChanged<int> onPick;
+
+  /// قطّارة الألوان: تلتقط لوناً من التصميم نفسه.
+  final VoidCallback? onEyedropper;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +104,21 @@ class ColorRow extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
+          if (onEyedropper != null)
+            GestureDetector(
+              onTap: onEyedropper,
+              child: Container(
+                width: 32,
+                height: 32,
+                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.panel2,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Icon(Icons.colorize_outlined, size: 17),
+              ),
+            ),
           GestureDetector(
             onTap: () async {
               final c = await showColorPicker(context, Color(selected));

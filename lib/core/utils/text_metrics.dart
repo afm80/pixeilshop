@@ -55,6 +55,7 @@ class TextMetrics {
         return s;
       case LayerType.image:
       case LayerType.shape:
+      case LayerType.draw:
         return Size(l.w, l.h);
     }
   }
