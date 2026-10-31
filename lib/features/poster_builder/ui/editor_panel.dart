@@ -118,7 +118,6 @@ typedef _Setter = void Function(void Function(Layer));
 // ───────────────────────── اللوحة الموحدة ─────────────────────────
 
 class EditorPanel extends StatefulWidget {
-<<<<<<< HEAD
   const EditorPanel({super.key, required this.controller, required this.images, required this.onEditNewText, this.only, this.part});
 
   /// عند تحديده يُعرض محتوى هذا القسم فقط ('layer' | 'add' | 'color' | 'bg' | 'layers') بدون ترويسة.
@@ -126,9 +125,6 @@ class EditorPanel extends StatefulWidget {
 
   /// مع only='layer': جزء واحد من خصائص العنصر (color/border/shadow/corners/blend/font/effects/pos).
   final String? part;
-=======
-  const EditorPanel({super.key, required this.controller, required this.images, required this.onEditNewText});
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
   final EditorController controller;
   final ImageStore images;
   final VoidCallback onEditNewText;
@@ -151,7 +147,6 @@ class _EditorPanelState extends State<EditorPanel> {
       builder: (context, _) => BlocBuilder<CanvasBloc, CanvasState>(
         builder: (context, st) {
           final sel = st.selected;
-<<<<<<< HEAD
           final only = widget.only;
           if (only != null) {
             final List<Widget> kids;
@@ -178,8 +173,6 @@ class _EditorPanelState extends State<EditorPanel> {
             }
             return ListView(padding: const EdgeInsets.fromLTRB(14, 4, 14, 16), children: kids);
           }
-=======
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
           return ListView(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
             children: [
@@ -495,7 +488,6 @@ class _EditorPanelState extends State<EditorPanel> {
     ];
   }
 
-<<<<<<< HEAD
   /// جزء واحد من خصائص الطبقة (نافذة منبثقة مستقلة لكل زر في الشريط السفلي).
   List<Widget> _layerPart(BuildContext context, Layer l, String part) {
     final bloc = context.read<CanvasBloc>();
@@ -600,8 +592,6 @@ class _EditorPanelState extends State<EditorPanel> {
     return const [];
   }
 
-=======
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
   /// تحريك بالبكسل (للمجموعة كلها إن كانت الطبقة ضمن مجموعة).
   Widget _nudgeRow(CanvasBloc bloc, Layer l) {
     void move(double dx, double dy) {

@@ -21,10 +21,7 @@ import '../model/doc.dart';
 import '../model/layer.dart';
 import 'canvas_view.dart';
 import 'editor_panel.dart';
-<<<<<<< HEAD
 import 'editor_toolbar.dart';
-=======
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
 import 'export_sheet.dart';
 
 /// startTool: '' | 'rmbg' | 'anime' | 'grade'
@@ -75,11 +72,7 @@ class _EditorPageState extends State<EditorPage> {
           _toast(exec.execute(const StyleCmd(StyleKind.anime)));
           break;
         case 'grade':
-<<<<<<< HEAD
           popup.value = 'color';
-=======
-          controller.openOnly('color');
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
           break;
       }
     });
@@ -249,24 +242,6 @@ class _EditorPageState extends State<EditorPage> {
                       onEditText: () => _editSelectedText(ctx),
                     ),
                   ),
-<<<<<<< HEAD
-=======
-                  const CopilotBar(),
-                  SizedBox(
-                    height: 300,
-                    child: ColoredBox(
-                      color: AppColors.panel,
-                      child: SafeArea(
-                        top: false,
-                        child: EditorPanel(
-                          controller: controller,
-                          images: images,
-                          onEditNewText: () => Future.delayed(const Duration(milliseconds: 120), () => _editSelectedText(ctx)),
-                        ),
-                      ),
-                    ),
-                  ),
->>>>>>> cb3e262699f3d6ae9139ad563a5e173c49edadcb
                 ],
               ),
             );
