@@ -11,11 +11,31 @@ import '../bloc/canvas_bloc.dart';
 import '../model/doc.dart';
 import '../model/layer.dart';
 
-/// حالة أدوات المحرر المشتركة (الممحاة، التبويب الحالي).
+/// حالة أدوات المحرر المشتركة (الممحاة، الأقسام المفتوحة في اللوحة الموحدة).
 class EditorController extends ChangeNotifier {
   String? eraserLayerId;
   double eraserRadius = 0.04; // نسبة من عرض الطبقة
-  int tab = 0;
+  final Set<String> _open = {'add'};
+
+  bool isOpen(String id) => _open.contains(id);
+
+  void toggle(String id) {
+    if (!_open.remove(id)) _open.add(id);
+    notifyListeners();
+  }
+
+  /// يفتح قسماً بدون إغلاق الباقي.
+  void show(String id) {
+    if (_open.add(id)) notifyListeners();
+  }
+
+  /// يفتح قسماً واحداً ويطوي الباقي.
+  void openOnly(String id) {
+    _open
+      ..clear()
+      ..add(id);
+    notifyListeners();
+  }
 
   void startEraser(String id) {
     eraserLayerId = id;
@@ -29,11 +49,6 @@ class EditorController extends ChangeNotifier {
 
   void setRadius(double r) {
     eraserRadius = r;
-    notifyListeners();
-  }
-
-  void setTab(int t) {
-    tab = t;
     notifyListeners();
   }
 }
@@ -122,7 +137,10 @@ class _CanvasViewState extends State<CanvasView> {
       return;
     }
     _hadSelBefore = hit.id == st.selectedId;
-    if (!_hadSelBefore) _bloc.add(LayerSelected(hit.id));
+    if (!_hadSelBefore) {
+      _bloc.add(LayerSelected(hit.id));
+      widget.controller.show('layer'); // فتح قسم الطبقة عند الضغط على عنصر فقط
+    }
     _target = hit.id;
     _mode = _Mode.drag;
     _snapshot(hit, p);
