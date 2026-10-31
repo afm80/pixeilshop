@@ -9,6 +9,7 @@ import 'features/home/home_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await StorageService.init();
+  await FontService.loadCustom(); // الخطوط التي رفعها المستخدم
   FontService.ensure('Cairo'); // تسخين الخط الافتراضي دون تعطيل الإقلاع
   runApp(const PixeilShopApp());
 }
