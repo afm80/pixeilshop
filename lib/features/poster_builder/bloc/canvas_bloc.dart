@@ -27,11 +27,13 @@ class LayerAdded extends CanvasEvent {
 
 /// "اضف نص 'عرض خاص'" ← CanvasBloc.addTextLayer('عرض خاص')
 class TextLayerAdded extends CanvasEvent {
-  const TextLayerAdded(this.text, {this.font, this.color, this.fontSize});
+  const TextLayerAdded(this.text, {this.font, this.color, this.fontSize, this.width, this.bold});
   final String text;
   final String? font;
   final int? color;
   final double? fontSize;
+  final double? width; // عرض الصندوق؛ الافتراضي 80% من التصميم
+  final bool? bold;
 }
 
 class ShapeLayerAdded extends CanvasEvent {
@@ -168,8 +170,9 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       l.text = e.text;
       l.x = d.w / 2;
       l.y = d.h / 2;
-      l.w = d.w * 0.8;
+      l.w = e.width ?? d.w * 0.8;
       l.fontSize = e.fontSize ?? d.w * 0.09;
+      if (e.bold != null) l.bold = e.bold!;
       if (e.font != null) l.font = e.font!;
       if (e.color != null) l.color = e.color!;
       d.layers.add(l);
