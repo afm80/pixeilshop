@@ -1,4 +1,4 @@
-# OmniStudio AI Free
+# PixeilShop
 
 استوديو تصميم وتحرير صور مبني بـ Flutter، مجاني 100%، والمعالجة كلها **على جهاز المستخدم** (بدون API Keys وبدون سيرفرات مدفوعة).
 
@@ -12,6 +12,14 @@
 | تعديل ألوان على طريقة Lightroom | `ColorFilter.matrix`: سطوع، تباين، تشبع، حرارة، صبغة، بهتان، Hue، فينيت + 13 فلتراً سينمائياً، على طبقة أو التصميم كله |
 | دمج وتراكب | 12 وضع `BlendMode` لكل طبقة |
 | الممحاة اليدوية | `BlendMode.clear` غير مدمّرة (قابلة للتراجع) |
+| قص وتدوير الصور وإطار وزوايا مستديرة | خبز الصورة في ملف جديد (يحافظ على الممحاة) |
+| فرشاة رسم حر + ممحاة + خط متقطع | طبقة رسم مستقلة بضربات قابلة للتراجع |
+| تعبئات: لون / تدرج خطي ودائري / نقشات / صورة | للنصوص والأشكال والأيقونات |
+| تظليل النص (Highlight) وانعكاس | داخل `poster_painter.dart` |
+| أيقونات قابلة للتعديل | خط Material Icons كطبقة نص |
+| تجميع الطبقات، تكبير، شبكة، مغناطيس، تحريك بالبكسل | `editor_panel.dart` + `canvas_view.dart` |
+| خطوط مخصصة (ttf/otf) | `FontService.addCustom` |
+| قطّارة ألوان من التصميم | في كل صف ألوان |
 | كولاج | 4 تخطيطات + `flutter_staggered_grid_view` |
 | أنمي/كرتون | `tflite_flutter` (AnimeGANv2/CartoonGAN) + فلاتر كوميك/رسم رصاص بـ Dart كبديل |
 | المساعد الذكي | `speech_to_text` + محلل أوامر Regex عربي/إنجليزي ينفّذ على الـ Blocs |
@@ -28,8 +36,7 @@ lib/
 │   └── theme/
 ├── features/
 │   ├── background_remover/  # SubjectSegmentationBloc + الخدمة
-│   ├── poster_builder/      # CanvasBloc + النماذج + المحرر وكل اللوحات
-│   ├── color_grading/       # لوحة الألوان
+│   ├── poster_builder/      # CanvasBloc + النماذج + المحرر الموحّد (editor_panel.dart)
 │   ├── anime_morph/         # AnimeBloc + لوحة التحويل
 │   ├── ai_copilot/          # CommandParser + CopilotBloc + CommandExecutor
 │   ├── collage/  home/
@@ -53,13 +60,13 @@ lib/
 المستودع لا يحتوي مجلد `android/` (يُولَّد). محلياً:
 
 ```bash
-flutter create --platforms=android --org com.omnistudio --project-name omnistudio_ai .
-python3 tool/patch_android.py      # أذونات + minSdk 24 + نموذج ML Kit
+flutter create --platforms=android --org com.pixeilshop --project-name pixeilshop .
+python3 tool/patch_android.py      # أذونات + minSdk 24 + نموذج ML Kit + أيقونة التطبيق
 flutter pub get
 flutter run
 ```
 
-أو ارفع المشروع إلى GitHub وشغّل workflow **Build APK** (`.github/workflows/build.yml`) وحمّل ملف الـ APK من Artifacts.
+أو ارفع المشروع إلى GitHub وشغّل workflow **Build APK** (`.github/workflows/build.yml`) وحمّل ملف `pixeilshop.apk` من Artifacts — ملف واحد شامل يعمل على جميع المعالجات (arm64 / arm32 / x86_64).
 
 ## نماذج TFLite (اختيارية)
 
