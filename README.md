@@ -68,6 +68,10 @@ flutter run
 
 أو ارفع المشروع إلى GitHub وشغّل workflow **Build APK** (`.github/workflows/build.yml`) وحمّل ملف `pixeilshop.apk` من Artifacts — ملف واحد شامل يعمل على جميع المعالجات (arm64 / arm32 / x86_64).
 
+## الخطوط دون إنترنت
+
+يحمّل `tool/fetch_fonts.py` الخطوط المذكورة في `FontService` إلى `assets/google_fonts/` (يعمل تلقائياً في workflow البناء)، فتُضمَّن داخل الـ APK. لتجربتها محلياً شغّله قبل `flutter run`. إن تعذر تنزيل خط يبقى التنزيل وقت التشغيل كبديل.
+
 ## نماذج TFLite (اختيارية)
 
 ضع `animeganv2.tflite` و/أو `cartoongan.tflite` في `assets/models/`. بدونها يعمل التحويل بفلتر Dart محلي. التفاصيل في `assets/models/README.md`.
