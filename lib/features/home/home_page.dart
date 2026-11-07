@@ -75,7 +75,7 @@ class _HomePageState extends State<HomePage> {
                             height: tile,
                             child: Stack(
                               children: [
-                                _Tile(label: 'التصميم', onTap: () => setState(() => _menu = !_menu)),
+                                _Tile(icon: Icons.palette_outlined, label: 'التصميم', onTap: () => setState(() => _menu = !_menu)),
                                 if (_menu)
                                   Positioned.fill(
                                     child: _DesignMenu(
@@ -88,14 +88,14 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           const SizedBox(width: gap),
-                          SizedBox(width: tile, height: tile, child: _Tile(label: 'الكامرة', onTap: () => _go(const CameraPage()))),
+                          SizedBox(width: tile, height: tile, child: _Tile(icon: Icons.photo_camera_outlined, label: 'الكامرة', onTap: () => _go(const CameraPage()))),
                         ],
                       ),
                       const SizedBox(height: gap),
                       SizedBox(
                         width: cw,
                         height: 58,
-                        child: _Tile(label: 'تصاميم محفوظة', size: 17, onTap: () => _go(const SavedPage())),
+                        child: _Tile(icon: Icons.folder_open_outlined, label: 'تصاميم محفوظة', size: 17, row: true, onTap: () => _go(const SavedPage())),
                       ),
                     ],
                   ),
@@ -110,8 +110,10 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.label, required this.onTap, this.size = 24});
+  const _Tile({required this.label, required this.onTap, this.icon, this.size = 24, this.row = false});
   final String label;
+  final IconData? icon;
+  final bool row;
   final VoidCallback onTap;
   final double size;
 
@@ -120,7 +122,17 @@ class _Tile extends StatelessWidget {
         color: _tileColor,
         child: InkWell(
           onTap: onTap,
-          child: Center(child: Text(label, style: TextStyle(color: _orange, fontSize: size, fontWeight: FontWeight.w500))),
+          child: Center(
+            child: Flex(
+              direction: row ? Axis.horizontal : Axis.vertical,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) Icon(icon, color: _orange, size: row ? 24 : 52),
+                const SizedBox(width: 10, height: 10),
+                Text(label, style: TextStyle(color: _orange, fontSize: size, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
         ),
       );
 }

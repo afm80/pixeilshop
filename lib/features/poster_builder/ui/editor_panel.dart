@@ -102,6 +102,19 @@ const _shapes = <(String, ShapeKind, IconData)>[
   ('خط', ShapeKind.line, Icons.horizontal_rule),
 ];
 
+const _gradPresets = <(int, int)>[
+  (0xFFFFD54F, 0xFFFF5252),
+  (0xFF42A5F5, 0xFF7E57C2),
+  (0xFF26C6DA, 0xFF66BB6A),
+  (0xFFFF7043, 0xFFEC407A),
+  (0xFFFFEB3B, 0xFF4CAF50),
+  (0xFF212121, 0xFF757575),
+  (0xFFFFFFFF, 0xFF90A4AE),
+  (0xFFF39B00, 0xFFFFE082),
+  (0xFF1A237E, 0xFF00BCD4),
+  (0xFFE91E63, 0xFFFFC107),
+];
+
 const _docSizes = <(String, double, double)>[
   ('مربع 1:1', 1080, 1080),
   ('بوست 4:5', 1080, 1350),
@@ -190,7 +203,7 @@ class _EditorPanelState extends State<EditorPanel> {
                 title: 'الطبقة المحددة',
                 open: ec.isOpen('layer'),
                 onTap: () => ec.toggle('layer'),
-                builder: () => sel == null ? [_noSelection()] : _layerSection(context, sel),
+                builder: () => sel == null ? _noSelection() : _layerSection(context, sel),
               ),
               _Section(
                 key: const ValueKey('add'),
@@ -559,6 +572,11 @@ class _EditorPanelState extends State<EditorPanel> {
           SliderRow(label: 'تباعد الحروف', value: l.letterSpacing, min: -5, max: 40, onStart: start, onChanged: (v) => live((x) => x.letterSpacing = v), display: (v) => v.toStringAsFixed(0)),
           SliderRow(label: 'ارتفاع السطر', value: l.lineHeight, min: 0.8, max: 2.4, onStart: start, onChanged: (v) => live((x) => x.lineHeight = v)),
         ];
+      case 'curve':
+        return [
+          SliderRow(label: 'التقويس', value: l.curve, min: -100, max: 100, onStart: start, onChanged: (v) => live((x) => x.curve = v), display: (v) => v.round().toString()),
+          const Padding(padding: EdgeInsets.only(top: 4), child: Text('في وضع التقويس يُستخدم لون واحد للنص.', style: TextStyle(fontSize: 11.5, color: AppColors.muted))),
+        ];
       case 'depth':
         return [
           _switchRow('تفعيل العمق', l.depthOn, (v) => set((x) => x.depthOn = v)),
@@ -694,6 +712,32 @@ class _EditorPanelState extends State<EditorPanel> {
               x.fillKind = 0;
             })),
       if (l.fillKind == 1 || l.fillKind == 2) ...[
+        const SectionLabel('تدرجات جاهزة'),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (final g in _gradPresets)
+                GestureDetector(
+                  onTap: () => set((x) {
+                    x.grad1 = g.$1;
+                    x.grad2 = g.$2;
+                  }),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white24),
+                      gradient: LinearGradient(colors: [Color(g.$1), Color(g.$2)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
         _colors(l.grad1, (c) => set((x) => x.grad1 = c)),
         _colors(l.grad2, (c) => set((x) => x.grad2 = c)),
       ],

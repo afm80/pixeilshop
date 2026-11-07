@@ -22,7 +22,7 @@ ThemeData buildTheme() {
       surface: AppColors.panel,
       error: AppColors.danger,
     ),
-    textTheme: GoogleFonts.tajawalTextTheme(base.textTheme),
+    textTheme: GoogleFonts.cairoTextTheme(base.textTheme),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.panel,
       elevation: 0,

@@ -293,7 +293,6 @@ class _CanvasViewState extends State<CanvasView> {
     _hadSelBefore = hit.id == st.selectedId;
     if (!_hadSelBefore) {
       _bloc.add(LayerSelected(hit.id));
-      ec.show('layer'); // فتح قسم الطبقة عند الضغط على عنصر فقط
     }
     _target = hit.id;
     _mode = _Mode.drag;
@@ -396,6 +395,8 @@ class _CanvasViewState extends State<CanvasView> {
       if (slop < 6 && (d.scale - 1).abs() < 0.02 && d.rotation.abs() < 0.03) return;
       _moved = true;
       _bloc.add(const CheckpointRequested());
+      // إعادة ضبط نقطة البدء عند تجاوز عتبة اللمس: يبدأ العنصر الحركة من مكانه بدون قفزة
+      if (_pc < 2) _snapshot(l, p);
     }
     final delta = p - _startFocal;
     var dx = delta.dx, dy = delta.dy;

@@ -23,7 +23,10 @@ class EditorBottom extends StatelessWidget {
     required this.popup,
     required this.onEditNewText,
     required this.onEditText,
+    this.popupOnly = false,
   });
+  /// true: يرسم النافذة المنبثقة فقط (تُوضع فوق اللوحة بدون تغيير حجمها)، false: الشريط فقط.
+  final bool popupOnly;
   final EditorController controller;
   final ImageStore images;
   final ValueNotifier<String?> popup;
@@ -47,6 +50,7 @@ class EditorBottom extends StatelessWidget {
     'p:font': 'الخطوط',
     'p:effects': 'الانعكاس والتظليل',
     'p:pos': 'الموقع',
+    'p:curve': 'التقويس',
     'p:depth': 'العمق',
     'p:skew': 'الانحناء',
     'p:image': 'قص وتدوير',
@@ -80,6 +84,7 @@ class EditorBottom extends StatelessWidget {
             it('p:font', Icons.font_download_outlined, 'الخطوط'),
             it('p:border', Icons.crop_din, 'إحاطة'),
             it('p:effects', Icons.flip_to_back, 'انعكاس'),
+            it('p:curve', Icons.waves, 'تقويس'),
             it('p:depth', Icons.layers_outlined, 'العمق'),
             it('p:skew', Icons.rotate_90_degrees_ccw, 'انحناء'),
             it('p:corners', Icons.rounded_corner, 'خلفية'),
@@ -112,41 +117,46 @@ class EditorBottom extends StatelessWidget {
         return ValueListenableBuilder<String?>(
           valueListenable: popup,
           builder: (context, open, _) {
+            if (popupOnly) {
+              if (open == null) return const SizedBox.shrink();
+              return Container(
+                height: 250,
+                decoration: const BoxDecoration(
+                  color: AppColors.panel,
+                  boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 12)],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      color: AppColors.panel2,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => popup.value = null,
+                            icon: const Icon(Icons.check, color: AppColors.accent),
+                          ),
+                          Expanded(
+                            child: Text(
+                              _titles[open] ?? '',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                            ),
+                          ),
+                          const SizedBox(width: 40),
+                        ],
+                      ),
+                    ),
+                    Expanded(child: _popupBody(open, l, bloc)),
+                  ],
+                ),
+              );
+            }
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (open != null)
-                  Container(
-                    height: 290,
-                    color: AppColors.panel,
-                    child: Column(
-                      children: [
-                        Container(
-                          height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          color: AppColors.panel2,
-                          child: Row(
-                            children: [
-                              IconButton(
-                                visualDensity: VisualDensity.compact,
-                                onPressed: () => popup.value = null,
-                                icon: const Icon(Icons.check, color: AppColors.accent),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  _titles[open] ?? '',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                                ),
-                              ),
-                              const SizedBox(width: 40),
-                            ],
-                          ),
-                        ),
-                        Expanded(child: _popupBody(open, l, bloc)),
-                      ],
-                    ),
-                  ),
                 Container(
                   height: 62,
                   color: AppColors.panel,

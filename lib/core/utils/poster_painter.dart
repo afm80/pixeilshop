@@ -316,6 +316,10 @@ void _drawText(Canvas c, Layer l, ImageStore images, Rect bounds) {
       c.restore();
     }
     if (l.hlOn) _highlightText(c, l, topLeft);
+    if (l.curve.abs() >= 1) {
+      _curvedText(c, l, bounds, topLeft);
+      return;
+    }
     if (l.strokeW > 0) {
       TextMetrics.build(l, stroke: true).paint(c, topLeft);
     }
@@ -369,6 +373,32 @@ void _drawText(Canvas c, Layer l, ImageStore images, Rect bounds) {
     c.save();
     c.transform(Float64List.fromList([1, ty, 0, 0, tx, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]));
     _withShadow(c, l, bounds, withReflection);
+    c.restore();
+  }
+}
+
+/// تقويس النص: يُقسَّم إلى شرائح عمودية رفيعة تُدار على قوس دائرة، فيبقى تشكيل الحروف (عربي/لاتيني) سليماً.
+/// في وضع التقويس يُستخدم لون التعبئة الواحد (بدون تدرج).
+void _curvedText(Canvas c, Layer l, Rect bounds, Offset topLeft) {
+  final w = bounds.width, h = bounds.height;
+  final theta = (l.curve.clamp(-100.0, 100.0) / 100) * math.pi; // حتى نصف دائرة
+  final r = w / theta.abs();
+  final sign = theta >= 0 ? 1.0 : -1.0;
+  const step = 3.0;
+  final stroke = l.strokeW > 0 ? TextMetrics.build(l, stroke: true) : null;
+  final fill = TextMetrics.build(l, stroke: false);
+  for (double u = -w / 2; u < w / 2; u += step) {
+    final um = u + step / 2;
+    final phi = um / r * sign;
+    final px = r * math.sin(phi) * sign;
+    final py = r * (1 - math.cos(phi)) * sign;
+    c.save();
+    c.translate(px, py);
+    c.rotate(phi);
+    c.translate(-um, 0);
+    c.clipRect(Rect.fromLTWH(u - 0.4, -h * 2, step + 0.8, h * 4));
+    stroke?.paint(c, topLeft);
+    fill.paint(c, topLeft);
     c.restore();
   }
 }

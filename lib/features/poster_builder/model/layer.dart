@@ -111,6 +111,7 @@ class Layer {
   int depthColor = 0xFF000000;
   double depthLen = 20, depthAngle = 45;
   double skewX = 0, skewY = 0; // بالدرجات
+  double curve = 0; // تقويس النص -100..100
   bool reflOn = false;
   double reflOpacity = 0.4, reflGap = 6;
 
@@ -207,6 +208,7 @@ class Layer {
         'dpl': depthLen,
         'dpa': depthAngle,
         'skx': skewX,
+        'cv': curve,
         'sky': skewY,
         'rf': reflOn,
         'ro': reflOpacity,
@@ -277,6 +279,7 @@ class Layer {
     l.depthLen = d('dpl', 20);
     l.depthAngle = d('dpa', 45);
     l.skewX = d('skx', 0);
+    l.curve = d('cv', 0);
     l.skewY = d('sky', 0);
     l.reflOn = b('rf', false);
     l.reflOpacity = d('ro', 0.4);

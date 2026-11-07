@@ -190,29 +190,65 @@ class _EditorPageState extends State<EditorPage> {
                   builder: (context, st) => Text(st.doc.name, style: const TextStyle(fontSize: 16)),
                 ),
                 actions: [
-                  IconButton(tooltip: 'الطبقات', onPressed: () => popup.value = popup.value == 'layers' ? null : 'layers', icon: const Icon(Icons.layers_outlined)),
-                  IconButton(tooltip: 'إضافة', onPressed: () => popup.value = 'add', icon: const Icon(Icons.add_circle, color: AppColors.accent)),
+                  IconButton(visualDensity: VisualDensity.compact, tooltip: 'تصغير', onPressed: () => controller.setView(controller.zoom / 1.25, controller.pan), icon: const Icon(Icons.zoom_out)),
+                  IconButton(visualDensity: VisualDensity.compact, tooltip: 'تكبير', onPressed: () => controller.setView(controller.zoom * 1.25, controller.pan), icon: const Icon(Icons.zoom_in)),
+                  PopupMenuButton<String>(
+                    tooltip: 'خيارات',
+                    icon: const Icon(Icons.more_vert),
+                    color: AppColors.panel2,
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'bg':
+                          popup.value = 'bg';
+                          break;
+                        case 'layers':
+                          popup.value = 'layers';
+                          break;
+                        case 'grid':
+                          controller.update(() => controller.showGrid = !controller.showGrid);
+                          break;
+                        case 'snap':
+                          controller.update(() => controller.snap = !controller.snap);
+                          break;
+                        case 'reset':
+                          controller.resetView();
+                          break;
+                        case 'export':
+                          showExportSheet(ctx, canvas.state.doc, images);
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'layers', child: Text('الطبقات')),
+                      PopupMenuItem(value: 'bg', child: Text('الخلفية والمقاس')),
+                      PopupMenuItem(value: 'grid', child: Text('إظهار/إخفاء الشبكة')),
+                      PopupMenuItem(value: 'snap', child: Text('تفعيل/إيقاف المحاذاة')),
+                      PopupMenuItem(value: 'reset', child: Text('إعادة ضبط العرض')),
+                      PopupMenuItem(value: 'export', child: Text('تصدير')),
+                    ],
+                  ),
+                  IconButton(visualDensity: VisualDensity.compact, tooltip: 'إضافة', onPressed: () => popup.value = 'add', icon: const Icon(Icons.add_circle, color: AppColors.accent)),
                   BlocBuilder<CanvasBloc, CanvasState>(
                     builder: (context, st) => Row(children: [
                       IconButton(
+                        visualDensity: VisualDensity.compact,
                         tooltip: 'تراجع',
                         onPressed: st.canUndo ? () => canvas.add(const UndoRequested()) : null,
                         icon: const Icon(Icons.undo),
                       ),
                       IconButton(
+                        visualDensity: VisualDensity.compact,
                         tooltip: 'إعادة',
                         onPressed: st.canRedo ? () => canvas.add(const RedoRequested()) : null,
                         icon: const Icon(Icons.redo),
                       ),
                     ]),
                   ),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: FilledButton.icon(
-                      onPressed: () => showExportSheet(ctx, canvas.state.doc, images),
-                      icon: const Icon(Icons.ios_share, size: 18),
-                      label: const Text('تصدير'),
-                    ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'تصدير',
+                    onPressed: () => showExportSheet(ctx, canvas.state.doc, images),
+                    icon: const Icon(Icons.ios_share),
                   ),
                 ],
               ),
@@ -226,6 +262,20 @@ class _EditorPageState extends State<EditorPage> {
                           child: CanvasView(
                             images: images,
                             controller: controller,
+                            onEditText: () => _editSelectedText(ctx),
+                          ),
+                        ),
+                        // النافذة المنبثقة فوق اللوحة: فتحها لا يغيّر حجم التصميم فلا يتحرك أو يقفز
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: EditorBottom(
+                            controller: controller,
+                            images: images,
+                            popup: popup,
+                            popupOnly: true,
+                            onEditNewText: () => Future.delayed(const Duration(milliseconds: 120), () => _editSelectedText(ctx)),
                             onEditText: () => _editSelectedText(ctx),
                           ),
                         ),
