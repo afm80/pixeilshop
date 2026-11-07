@@ -55,3 +55,40 @@ dst = pathlib.Path('android/app/src/main/res')
 if src.exists():
     shutil.copytree(src, dst, dirs_exist_ok=True)
     print('launcher icons copied')
+
+# بعض الإضافات (مثل file_picker) تُترجَم بـ compileSdk 34 بينما تعتمد مكتبات أندرويد حديثة على 36 فيفشل فحص AAR.
+# نفرض compileSdk 36 على كل المشاريع الفرعية (لا يغيّر targetSdk ولا minSdk).
+kts_fix = '''
+// --- pixeilshop: force compileSdk 36 for all plugin modules ---
+subprojects {
+    val pixeilFix = Action<Project> {
+        val ext = extensions.findByName("android")
+        if (ext != null) {
+            try {
+                ext.javaClass.getMethod("setCompileSdkVersion", Int::class.javaPrimitiveType).invoke(ext, 36)
+            } catch (e: Exception) {
+            }
+        }
+    }
+    if (state.executed) pixeilFix.execute(this) else afterEvaluate(pixeilFix)
+}
+'''
+groovy_fix = '''
+// --- pixeilshop: force compileSdk 36 for all plugin modules ---
+subprojects {
+    def pixeilFix = { Project p ->
+        def ext = p.extensions.findByName("android")
+        if (ext != null) {
+            try { ext.compileSdkVersion(36) } catch (Throwable ignored) {}
+        }
+    }
+    if (project.state.executed) pixeilFix(project) else project.afterEvaluate { pixeilFix(it) }
+}
+'''
+for name, snippet in (('build.gradle.kts', kts_fix), ('build.gradle', groovy_fix)):
+    f = pathlib.Path('android') / name
+    if f.exists():
+        t = f.read_text(encoding='utf-8')
+        if 'pixeilshop: force compileSdk' not in t:
+            f.write_text(t + snippet, encoding='utf-8')
+        print('compileSdk fix appended to', f)
