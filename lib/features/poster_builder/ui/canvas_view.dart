@@ -106,6 +106,26 @@ class EditorController extends ChangeNotifier {
   }
 }
 
+/// مقابض التحديد (بإحداثيات لوحة العرض): (النوع، الموضع).
+/// del=حذف، s1/s2=تكبير، rot=تدوير، l/r/t/b=تغيير العرض أو الارتفاع وحده.
+List<(String, Offset)> _handleList(Layer l, double vs) {
+  if (l.locked || l.type == LayerType.draw) return const [];
+  final sz = TextMetrics.size(l);
+  final hw = sz.width / 2, hh = sz.height / 2;
+  Offset p(double x, double y) => l.localToDoc(Offset(x, y)) * vs;
+  final isText = l.type == LayerType.text;
+  return [
+    ('del', p(-hw, -hh)),
+    ('s1', p(hw, -hh)),
+    ('rot', p(hw, hh)),
+    ('s2', p(-hw, hh)),
+    ('r', p(hw, 0)),
+    ('l', p(-hw, 0)),
+    if (!isText) ('b', p(0, hh)),
+    if (!isText) ('t', p(0, -hh)),
+  ];
+}
+
 enum _Mode { none, drag, handle, erase, view, brush, pick }
 
 class CanvasView extends StatefulWidget {
@@ -130,6 +150,8 @@ class _CanvasViewState extends State<CanvasView> {
   Offset? _pickPoint; // موضع القطّارة (إحداثيات محلية للوحة)
   Offset _lastBrush = Offset.zero;
   double _lastVs = 1;
+  String _hk = '';
+  Layer? _e0;
 
   /// لقطة أولية لأعضاء المجموعة: id -> [x, y, scale, rotation]
   final Map<String, List<double>> _g0 = {};
@@ -173,11 +195,6 @@ class _CanvasViewState extends State<CanvasView> {
       if (lp.dx.abs() <= s.width / 2 + pad && lp.dy.abs() <= s.height / 2 + pad) return l;
     }
     return null;
-  }
-
-  Offset _handlePos(Layer l) {
-    final s = TextMetrics.size(l);
-    return l.localToDoc(Offset(s.width / 2, s.height / 2));
   }
 
   List<Layer> _members(Doc doc, Layer l) {
@@ -271,15 +288,25 @@ class _CanvasViewState extends State<CanvasView> {
 
     final sel = st.selected;
     if (sel != null && !sel.locked && sel.type != LayerType.draw) {
-      final hp = _handlePos(sel);
-      if ((hp * vs - d.localFocalPoint).distance < 30 / ec.zoom) {
+      String? best;
+      var bd = 32 / ec.zoom;
+      for (final h in _handleList(sel, vs)) {
+        final dist = (h.$2 - d.localFocalPoint).distance;
+        if (dist < bd) {
+          bd = dist;
+          best = h.$1;
+        }
+      }
+      if (best != null) {
         _mode = _Mode.handle;
+        _hk = best;
         _target = sel.id;
         _snapshot(sel, p);
+        _e0 = sel.clone();
         final v = p - Offset(sel.x, sel.y);
         _d0 = math.max(v.distance, 1);
         _a0 = v.direction;
-        _bloc.add(const CheckpointRequested());
+        if (best != 'del') _bloc.add(const CheckpointRequested());
         return;
       }
     }
@@ -378,11 +405,52 @@ class _CanvasViewState extends State<CanvasView> {
     if (l == null) return;
 
     if (_mode == _Mode.handle) {
-      final v = p - Offset(l.x, l.y);
-      final k = (_s0 * v.distance / _d0).clamp(0.05, 20.0).toDouble() / _s0;
-      final dr = v.direction - _a0;
+      if (_hk == 'del') return;
       _moved = true;
-      _applyTransform(0, 0, k, dr);
+      if (_hk == 's1' || _hk == 's2') {
+        final v = p - Offset(l.x, l.y);
+        final k = (_s0 * v.distance / _d0).clamp(0.05, 20.0).toDouble() / _s0;
+        _applyTransform(0, 0, k, 0);
+      } else if (_hk == 'rot') {
+        final v = p - Offset(l.x, l.y);
+        _applyTransform(0, 0, 1, v.direction - _a0);
+      } else {
+        final e = _e0;
+        if (e == null) return;
+        final lp = e.docToLocal(p);
+        final s0 = TextMetrics.size(e);
+        var nw = s0.width, nh = s0.height;
+        var cx = 0.0, cy = 0.0;
+        switch (_hk) {
+          case 'r':
+            nw = math.max(24.0, lp.dx + s0.width / 2);
+            cx = (nw - s0.width) / 2;
+            break;
+          case 'l':
+            nw = math.max(24.0, s0.width / 2 - lp.dx);
+            cx = -(nw - s0.width) / 2;
+            break;
+          case 'b':
+            nh = math.max(24.0, lp.dy + s0.height / 2);
+            cy = (nh - s0.height) / 2;
+            break;
+          case 't':
+            nh = math.max(24.0, s0.height / 2 - lp.dy);
+            cy = -(nh - s0.height) / 2;
+            break;
+        }
+        final c = e.localToDoc(Offset(cx, cy));
+        final horiz = _hk == 'l' || _hk == 'r';
+        _bloc.add(LayerMutated((x) {
+          x.x = c.dx;
+          x.y = c.dy;
+          if (horiz) {
+            x.w = nw;
+          } else {
+            x.h = nh;
+          }
+        }, id: l.id));
+      }
       return;
     }
 
@@ -421,6 +489,10 @@ class _CanvasViewState extends State<CanvasView> {
       return;
     }
     if (wasMode == _Mode.brush) return;
+    if (wasMode == _Mode.handle) {
+      if (_hk == 'del' && !_moved) _bloc.add(const LayerRemoved());
+      return;
+    }
     if ((wasMode == _Mode.none || wasMode == _Mode.view) && !_moved) {
       _bloc.add(const LayerSelected(null));
     } else if (wasMode == _Mode.drag && !_moved && _hadSelBefore) {
@@ -468,6 +540,16 @@ class _CanvasViewState extends State<CanvasView> {
       ),
     );
   }
+
+  Widget _miniBtn(IconData icon, VoidCallback onTap, {bool yellow = false}) => InkWell(
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 40,
+          color: yellow ? AppColors.accent2 : Colors.transparent,
+          child: Icon(icon, size: 22, color: yellow ? Colors.black : AppColors.accent2),
+        ),
+      );
 
   Widget _statusChip(String text, VoidCallback onClose) {
     return Align(
@@ -560,6 +642,35 @@ class _CanvasViewState extends State<CanvasView> {
                     ),
                   ),
                 ),
+                if (sel != null && !sel.locked && !ec.brushOn && ec.picker == null)
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Material(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(10),
+                        clipBehavior: Clip.antiAlias,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _miniBtn(Icons.close, () => _bloc.add(const LayerSelected(null)), yellow: true),
+                            _miniBtn(Icons.copy, () => _bloc.add(const LayerDuplicated())),
+                            _miniBtn(Icons.fullscreen, () {
+                              final z = TextMetrics.size(sel);
+                              final k = math.min(doc.w / z.width, doc.h / z.height);
+                              _bloc.add(LayerMutated((x) {
+                                x.x = doc.w / 2;
+                                x.y = doc.h / 2;
+                                x.rotation = 0;
+                                x.scale = k;
+                              }, id: sel.id, commit: true));
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   left: 6,
                   bottom: 6,
@@ -652,23 +763,42 @@ class _SelectionPainter extends CustomPainter {
         ..strokeWidth = 1.6 / zoom
         ..color = color,
     );
-    if (!layer.locked && !erasing && layer.type != LayerType.draw) {
-      final hp = pts[2];
-      final r = 11 / zoom;
-      canvas.drawCircle(hp, r, Paint()..color = Colors.white);
-      canvas.drawCircle(
-        hp,
-        r,
-        Paint()
+    if (!erasing) {
+      const dark = Color(0xFF262626);
+      final yellow = AppColors.accent2;
+      for (final h in _handleList(layer, vs)) {
+        final kind = h.$1;
+        final c = h.$2;
+        final fillP = Paint()..color = dark;
+        final lineP = Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5 / zoom
-          ..color = color,
-      );
-      final tp = TextPainter(
-        text: TextSpan(text: '⤡', style: TextStyle(fontSize: 14 / zoom, color: Colors.black)),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, hp - Offset(tp.width / 2, tp.height / 2));
+          ..strokeWidth = 1.2 / zoom
+          ..color = yellow;
+        if (kind == 'l' || kind == 'r' || kind == 't' || kind == 'b') {
+          final wide = kind == 't' || kind == 'b';
+          canvas.save();
+          canvas.translate(c.dx, c.dy);
+          canvas.rotate(layer.rotation);
+          final r = Rect.fromCenter(center: Offset.zero, width: (wide ? 22 : 9) / zoom, height: (wide ? 9 : 22) / zoom);
+          canvas.drawRect(r, fillP);
+          canvas.drawRect(r, lineP);
+          canvas.restore();
+        } else {
+          final isDel = kind == 'del';
+          final r = Rect.fromCenter(center: c, width: 24 / zoom, height: 24 / zoom);
+          canvas.drawRect(r, Paint()..color = isDel ? yellow : dark);
+          canvas.drawRect(r, lineP);
+          final ic = isDel ? Icons.close : (kind == 'rot' ? Icons.sync : Icons.open_in_full);
+          final tp = TextPainter(
+            text: TextSpan(
+              text: String.fromCharCode(ic.codePoint),
+              style: TextStyle(fontFamily: ic.fontFamily, package: ic.fontPackage, fontSize: 17 / zoom, color: isDel ? Colors.black : yellow),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+        }
+      }
     }
   }
 
