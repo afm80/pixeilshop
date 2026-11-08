@@ -21,7 +21,7 @@ import '../model/doc.dart';
 import '../model/layer.dart';
 import 'canvas_view.dart';
 import 'editor_panel.dart';
-import 'editor_toolbar.dart';
+import 'editor_shell.dart';
 import 'export_sheet.dart';
 
 /// startTool: '' | 'rmbg' | 'anime' | 'grade'
@@ -72,7 +72,7 @@ class _EditorPageState extends State<EditorPage> {
           _toast(exec.execute(const StyleCmd(StyleKind.anime)));
           break;
         case 'grade':
-          popup.value = 'color';
+          controller.openTool?.call('dfilters');
           break;
       }
     });
@@ -181,118 +181,17 @@ class _EditorPageState extends State<EditorPage> {
           child: Builder(builder: (ctx) {
             _innerContext = ctx;
             return Scaffold(
-              // لوحة المفاتيح (محرر النص) لا يجب أن تصغّر اللوحة فتقفز العناصر
+              backgroundColor: const Color(0xFF272727),
               resizeToAvoidBottomInset: false,
-              appBar: AppBar(
-                leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 20), onPressed: _persistAndLeave),
-                title: BlocBuilder<CanvasBloc, CanvasState>(
-                  buildWhen: (a, b) => a.doc.name != b.doc.name,
-                  builder: (context, st) => Text(st.doc.name, style: const TextStyle(fontSize: 16)),
+              body: SafeArea(
+                bottom: false,
+                child: EditorShell(
+                  controller: controller,
+                  images: images,
+                  onLeave: _persistAndLeave,
+                  onExport: () => showExportSheet(ctx, canvas.state.doc, images),
+                  onEditText: () => _editSelectedText(ctx),
                 ),
-                actions: [
-                  IconButton(visualDensity: VisualDensity.compact, tooltip: 'تصغير', onPressed: () => controller.setView(controller.zoom / 1.25, controller.pan), icon: const Icon(Icons.zoom_out)),
-                  IconButton(visualDensity: VisualDensity.compact, tooltip: 'تكبير', onPressed: () => controller.setView(controller.zoom * 1.25, controller.pan), icon: const Icon(Icons.zoom_in)),
-                  PopupMenuButton<String>(
-                    tooltip: 'خيارات',
-                    icon: const Icon(Icons.more_vert),
-                    color: AppColors.panel2,
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'bg':
-                          popup.value = 'bg';
-                          break;
-                        case 'layers':
-                          popup.value = 'layers';
-                          break;
-                        case 'grid':
-                          controller.update(() => controller.showGrid = !controller.showGrid);
-                          break;
-                        case 'snap':
-                          controller.update(() => controller.snap = !controller.snap);
-                          break;
-                        case 'reset':
-                          controller.resetView();
-                          break;
-                        case 'export':
-                          showExportSheet(ctx, canvas.state.doc, images);
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'layers', child: Text('الطبقات')),
-                      PopupMenuItem(value: 'bg', child: Text('الخلفية والمقاس')),
-                      PopupMenuItem(value: 'grid', child: Text('إظهار/إخفاء الشبكة')),
-                      PopupMenuItem(value: 'snap', child: Text('تفعيل/إيقاف المحاذاة')),
-                      PopupMenuItem(value: 'reset', child: Text('إعادة ضبط العرض')),
-                      PopupMenuItem(value: 'export', child: Text('تصدير')),
-                    ],
-                  ),
-                  IconButton(visualDensity: VisualDensity.compact, tooltip: 'إضافة', onPressed: () => popup.value = 'add', icon: const Icon(Icons.add_circle, color: AppColors.accent)),
-                  BlocBuilder<CanvasBloc, CanvasState>(
-                    builder: (context, st) => Row(children: [
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        tooltip: 'تراجع',
-                        onPressed: st.canUndo ? () => canvas.add(const UndoRequested()) : null,
-                        icon: const Icon(Icons.undo),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        tooltip: 'إعادة',
-                        onPressed: st.canRedo ? () => canvas.add(const RedoRequested()) : null,
-                        icon: const Icon(Icons.redo),
-                      ),
-                    ]),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'تصدير',
-                    onPressed: () => showExportSheet(ctx, canvas.state.doc, images),
-                    icon: const Icon(Icons.ios_share),
-                  ),
-                ],
-              ),
-              body: Column(
-                children: [
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        const Positioned.fill(child: CustomPaint(painter: DotsPainter())),
-                        Positioned.fill(
-                          child: CanvasView(
-                            images: images,
-                            controller: controller,
-                            onEditText: () => _editSelectedText(ctx),
-                          ),
-                        ),
-                        // النافذة المنبثقة فوق اللوحة: فتحها لا يغيّر حجم التصميم فلا يتحرك أو يقفز
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: EditorBottom(
-                            controller: controller,
-                            images: images,
-                            popup: popup,
-                            popupOnly: true,
-                            onEditNewText: () => Future.delayed(const Duration(milliseconds: 120), () => _editSelectedText(ctx)),
-                            onEditText: () => _editSelectedText(ctx),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SafeArea(
-                    top: false,
-                    child: EditorBottom(
-                      controller: controller,
-                      images: images,
-                      popup: popup,
-                      onEditNewText: () => Future.delayed(const Duration(milliseconds: 120), () => _editSelectedText(ctx)),
-                      onEditText: () => _editSelectedText(ctx),
-                    ),
-                  ),
-                ],
               ),
             );
           }),

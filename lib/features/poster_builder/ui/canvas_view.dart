@@ -93,6 +93,16 @@ class EditorController extends ChangeNotifier {
 
   void resetView() => setView(1, Offset.zero);
 
+  /// الأداة المفتوحة حالياً (شاشة كاملة). عندها تُخفى مقابض التحديد ويُعطَّل اللمس إلا للقطّارة.
+  String? tool;
+  /// يطلب فتح أداة من الشريط العائم فوق اللوحة.
+  void Function(String tool)? openTool;
+
+  void setTool(String? t) {
+    tool = t;
+    notifyListeners();
+  }
+
   void startPicker(void Function(int color) cb) {
     picker = cb;
     brushOn = false;
@@ -116,11 +126,11 @@ List<(String, Offset)> _handleList(Layer l, double vs) {
   final isText = l.type == LayerType.text;
   return [
     ('del', p(-hw, -hh)),
-    ('s1', p(hw, -hh)),
+    (isText ? 'edit' : 's1', p(hw, -hh)),
     ('rot', p(hw, hh)),
     ('s2', p(-hw, hh)),
     ('r', p(hw, 0)),
-    ('l', p(-hw, 0)),
+    if (!isText) ('l', p(-hw, 0)),
     if (!isText) ('b', p(0, hh)),
     if (!isText) ('t', p(0, -hh)),
   ];
@@ -306,7 +316,7 @@ class _CanvasViewState extends State<CanvasView> {
         final v = p - Offset(sel.x, sel.y);
         _d0 = math.max(v.distance, 1);
         _a0 = v.direction;
-        if (best != 'del') _bloc.add(const CheckpointRequested());
+        if (best != 'del' && best != 'edit') _bloc.add(const CheckpointRequested());
         return;
       }
     }
@@ -405,7 +415,7 @@ class _CanvasViewState extends State<CanvasView> {
     if (l == null) return;
 
     if (_mode == _Mode.handle) {
-      if (_hk == 'del') return;
+      if (_hk == 'del' || _hk == 'edit') return;
       _moved = true;
       if (_hk == 's1' || _hk == 's2') {
         final v = p - Offset(l.x, l.y);
@@ -491,6 +501,7 @@ class _CanvasViewState extends State<CanvasView> {
     if (wasMode == _Mode.brush) return;
     if (wasMode == _Mode.handle) {
       if (_hk == 'del' && !_moved) _bloc.add(const LayerRemoved());
+      if (_hk == 'edit' && !_moved) widget.onEditText();
       return;
     }
     if ((wasMode == _Mode.none || wasMode == _Mode.view) && !_moved) {
@@ -541,13 +552,13 @@ class _CanvasViewState extends State<CanvasView> {
     );
   }
 
-  Widget _miniBtn(IconData icon, VoidCallback onTap, {bool yellow = false}) => InkWell(
+  Widget _miniBtn(IconData icon, VoidCallback onTap, {bool yellow = false, bool white = false}) => InkWell(
         onTap: onTap,
         child: Container(
           width: 44,
           height: 40,
           color: yellow ? AppColors.accent2 : Colors.transparent,
-          child: Icon(icon, size: 22, color: yellow ? Colors.black : AppColors.accent2),
+          child: Icon(icon, size: 22, color: yellow ? Colors.black : (white ? Colors.white : AppColors.accent2)),
         ),
       );
 
@@ -598,7 +609,9 @@ class _CanvasViewState extends State<CanvasView> {
               width: w,
               height: h,
               decoration: const BoxDecoration(boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 18)]),
-              child: GestureDetector(
+              child: IgnorePointer(
+                ignoring: ec.tool != null && ec.picker == null,
+                child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onScaleStart: (d) => _onStart(d, vs),
                 onScaleUpdate: (d) => _onUpdate(d, vs),
@@ -612,7 +625,7 @@ class _CanvasViewState extends State<CanvasView> {
                       Positioned.fill(
                         child: IgnorePointer(child: CustomPaint(painter: _GridPainter(gridStep(doc) * vs, ec.zoom))),
                       ),
-                    if (sel != null && !sel.hidden)
+                    if (sel != null && !sel.hidden && ec.tool == null)
                       Positioned.fill(
                         child: IgnorePointer(
                           child: CustomPaint(
@@ -629,6 +642,7 @@ class _CanvasViewState extends State<CanvasView> {
                   ],
                 ),
               ),
+              ),
             );
             return Stack(
               children: [
@@ -642,52 +656,63 @@ class _CanvasViewState extends State<CanvasView> {
                     ),
                   ),
                 ),
-                if (sel != null && !sel.locked && !ec.brushOn && ec.picker == null)
+                if (sel != null && !sel.locked && !ec.brushOn && ec.picker == null && ec.tool == null)
                   Align(
                     alignment: Alignment.topCenter,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Material(
-                        color: Colors.black87,
-                        borderRadius: BorderRadius.circular(10),
-                        clipBehavior: Clip.antiAlias,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _miniBtn(Icons.close, () => _bloc.add(const LayerSelected(null)), yellow: true),
-                            _miniBtn(Icons.copy, () => _bloc.add(const LayerDuplicated())),
-                            _miniBtn(Icons.fullscreen, () {
-                              final z = TextMetrics.size(sel);
-                              final k = math.min(doc.w / z.width, doc.h / z.height);
-                              _bloc.add(LayerMutated((x) {
-                                x.x = doc.w / 2;
-                                x.y = doc.h / 2;
-                                x.rotation = 0;
-                                x.scale = k;
-                              }, id: sel.id, commit: true));
-                            }),
-                          ],
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Material(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(12),
+                          clipBehavior: Clip.antiAlias,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _miniBtn(Icons.close, () => _bloc.add(const LayerSelected(null)), yellow: true),
+                              _miniBtn(Icons.open_with, () => ec.openTool?.call('pos')),
+                              if (sel.type == LayerType.text) ...[
+                                InkWell(
+                                  onTap: () => ec.openTool?.call('fsize'),
+                                  child: SizedBox(
+                                    width: 44,
+                                    height: 40,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text('${sel.fontSize.round()}', style: const TextStyle(fontSize: 10.5, color: Colors.white)),
+                                        const Icon(Icons.text_fields, size: 18, color: Colors.white),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                _miniBtn(
+                                  sel.align == 0 ? Icons.format_align_left : (sel.align == 2 ? Icons.format_align_right : Icons.format_align_center),
+                                  () => _bloc.add(LayerMutated((x) => x.align = (x.align + 1) % 3, id: sel.id, commit: true)),
+                                  white: true,
+                                ),
+                                _miniBtn(Icons.format_bold, () => _bloc.add(LayerMutated((x) => x.bold = !x.bold, id: sel.id, commit: true)), white: true),
+                                _miniBtn(Icons.format_italic, () => _bloc.add(LayerMutated((x) => x.italic = !x.italic, id: sel.id, commit: true)), white: true),
+                              ],
+                              _miniBtn(Icons.copy, () => _bloc.add(const LayerDuplicated()), white: true),
+                              if (sel.type != LayerType.text)
+                                _miniBtn(Icons.fullscreen, () {
+                                  final z = TextMetrics.size(sel);
+                                  final k = math.min(doc.w / z.width, doc.h / z.height);
+                                  _bloc.add(LayerMutated((x) {
+                                    x.x = doc.w / 2;
+                                    x.y = doc.h / 2;
+                                    x.rotation = 0;
+                                    x.scale = k;
+                                  }, id: sel.id, commit: true));
+                                }, white: true),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                Positioned(
-                  left: 6,
-                  bottom: 6,
-                  child: Row(children: [
-                    _roundBtn(Icons.add, () => ec.setView(ec.zoom * 1.5, ec.pan), tip: 'تكبير'),
-                    _roundBtn(Icons.remove, () => ec.setView(ec.zoom / 1.5, ec.pan), tip: 'تصغير'),
-                    if (ec.zoom > 1) _roundBtn(Icons.fit_screen, ec.resetView, tip: 'ملاءمة'),
-                  ]),
-                ),
-                Positioned(
-                  right: 6,
-                  bottom: 6,
-                  child: Row(children: [
-                    _roundBtn(Icons.grid_4x4, () => ec.update(() => ec.showGrid = !ec.showGrid), on: ec.showGrid, tip: 'شبكة'),
-                    _roundBtn(Icons.adjust, () => ec.update(() => ec.snap = !ec.snap), on: ec.snap, tip: 'مغناطيس'),
-                  ]),
-                ),
                 if (ec.picker != null)
                   _statusChip('اضغط على التصميم لالتقاط لون', ec.stopPicker)
                 else if (ec.brushOn)
@@ -788,7 +813,7 @@ class _SelectionPainter extends CustomPainter {
           final r = Rect.fromCenter(center: c, width: 24 / zoom, height: 24 / zoom);
           canvas.drawRect(r, Paint()..color = isDel ? yellow : dark);
           canvas.drawRect(r, lineP);
-          final ic = isDel ? Icons.close : (kind == 'rot' ? Icons.sync : Icons.open_in_full);
+          final ic = isDel ? Icons.close : (kind == 'rot' ? Icons.sync : (kind == 'edit' ? Icons.title : Icons.open_in_full));
           final tp = TextPainter(
             text: TextSpan(
               text: String.fromCharCode(ic.codePoint),

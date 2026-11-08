@@ -22,6 +22,7 @@ import '../model/layer.dart';
 import 'canvas_view.dart';
 import 'crop_dialog.dart';
 import 'font_picker.dart';
+import 'text_dialog.dart';
 
 /// محرر موحّد: يجمع (الطبقة المحددة، الإضافة، الألوان، الخلفية والمقاس، الطبقات)
 /// في لوحة واحدة بأقسام قابلة للطي بدل التبويبات المنفصلة.
@@ -30,39 +31,9 @@ import 'font_picker.dart';
 
 Future<void> showTextEditor(BuildContext context, Layer layer) async {
   final bloc = context.read<CanvasBloc>();
-  final ctrl = TextEditingController(text: layer.text);
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: ctrl,
-            autofocus: true,
-            minLines: 1,
-            maxLines: 5,
-            decoration: const InputDecoration(labelText: 'النص', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                final t = ctrl.text;
-                bloc.add(LayerMutated((l) => l.text = t.isEmpty ? ' ' : t, id: layer.id, commit: true));
-                Navigator.pop(ctx);
-              },
-              child: const Text('تم'),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-  ctrl.dispose();
+  final t = await showTextDialog(context, initial: layer.text, title: 'تعديل النص');
+  if (t == null) return;
+  bloc.add(LayerMutated((l) => l.text = t.isEmpty ? ' ' : t, id: layer.id, commit: true));
 }
 
 // ───────────────────────── ثوابت ─────────────────────────
@@ -1399,3 +1370,12 @@ class _Act extends StatelessWidget {
         ),
       );
 }
+
+/// مجموعات عامة تستخدمها شاشات المحرر الجديدة.
+const List<String> kStickerList = _stickers;
+const List<IconData> kIconList = _icons;
+
+// قوائم عامة تستعملها واجهة المحرر الجديدة
+const kStickerList = _stickers;
+const kIconList = _icons;
+const kShapeList = _shapes;
