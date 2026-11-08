@@ -153,24 +153,27 @@ class FontsReady extends CanvasEvent {
 // ───────────────────────────── الحالة ─────────────────────────────
 
 class CanvasState extends Equatable {
-  const CanvasState({required this.doc, this.selectedId, this.revision = 0, this.canUndo = false, this.canRedo = false});
+  const CanvasState({required this.doc, this.selectedId, this.revision = 0, this.canUndo = false, this.canRedo = false, this.undoCount = 0, this.redoCount = 0});
   final Doc doc;
   final String? selectedId;
   final int revision;
   final bool canUndo, canRedo;
+  final int undoCount, redoCount;
 
   Layer? get selected => doc.byId(selectedId);
 
-  CanvasState copyWith({Doc? doc, Object? selectedId = _keep, int? revision, bool? canUndo, bool? canRedo}) => CanvasState(
+  CanvasState copyWith({Doc? doc, Object? selectedId = _keep, int? revision, bool? canUndo, bool? canRedo, int? undoCount, int? redoCount}) => CanvasState(
         doc: doc ?? this.doc,
         selectedId: identical(selectedId, _keep) ? this.selectedId : selectedId as String?,
         revision: revision ?? this.revision,
         canUndo: canUndo ?? this.canUndo,
         canRedo: canRedo ?? this.canRedo,
+        undoCount: undoCount ?? this.undoCount,
+        redoCount: redoCount ?? this.redoCount,
       );
 
   @override
-  List<Object?> get props => [selectedId, revision, canUndo, canRedo, doc.id];
+  List<Object?> get props => [selectedId, revision, canUndo, canRedo, undoCount, redoCount, doc.id];
 }
 
 const Object _keep = Object();
@@ -402,6 +405,8 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       revision: state.revision + 1,
       canUndo: _undo.isNotEmpty,
       canRedo: _redo.isNotEmpty,
+      undoCount: _undo.length,
+      redoCount: _redo.length,
     ));
   }
 
@@ -414,6 +419,8 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       revision: state.revision + 1,
       canUndo: _undo.isNotEmpty,
       canRedo: _redo.isNotEmpty,
+      undoCount: _undo.length,
+      redoCount: _redo.length,
     ));
   }
 
