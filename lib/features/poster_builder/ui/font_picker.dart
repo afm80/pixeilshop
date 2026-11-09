@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/services/font_service.dart';
+import '../../../core/services/user_fonts.g.dart';
 import '../../../core/theme/app_theme.dart';
 
 /// شاشة اختيار الخط: ✕ / عنوان / ✓ ، تبويبات (خطوطي · عربي · إنجليزي) وتبويبات فرعية للعربي،
@@ -31,7 +32,13 @@ class _FontPicker extends StatefulWidget {
 
 class _FontPickerState extends State<_FontPicker> {
   late String _sel = widget.current;
-  String _group = _arabicGroups.keys.first;
+  // تصنيفات التطبيق + تصنيفات خطوط المستخدم (من مجلدات assets/user_fonts)
+  late final Map<String, List<String>> _groups = () {
+    final m = <String, List<String>>{for (final e in _arabicGroups.entries) e.key: [...e.value]};
+    kUserArabic.forEach((k, v) => m[k] = [...v, ...(m[k] ?? const <String>[])]);
+    return m;
+  }();
+  late String _group = _groups.keys.first;
 
   Future<void> _upload() async {
     final r = await FilePicker.platform.pickFiles(type: FileType.any);
@@ -103,7 +110,7 @@ class _FontPickerState extends State<_FontPicker> {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            for (final g in _arabicGroups.keys)
+            for (final g in _groups.keys)
               InkWell(
                 onTap: () => setState(() => _group = g),
                 child: Container(
@@ -124,7 +131,7 @@ class _FontPickerState extends State<_FontPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final fonts = (_arabicGroups[_group] ?? const <String>[]).where(FontService.arabic.contains).toList();
+    final fonts = (_groups[_group] ?? const <String>[]).where((f) => FontService.arabic.contains(f) || FontService.bundledUser.contains(f)).toList();
     return DefaultTabController(
       length: 3,
       initialIndex: 1,
@@ -173,7 +180,7 @@ class _FontPickerState extends State<_FontPicker> {
                       ),
                     ),
                     Column(children: [_subTabs(), Expanded(child: _list(fonts, 'مرحبا'))]),
-                    _list(FontService.latin, 'How are you'),
+                    _list([...kUserLatin, ...FontService.latin], 'How are you'),
                   ],
                 ),
               ),
