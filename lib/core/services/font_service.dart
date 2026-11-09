@@ -48,6 +48,24 @@ class FontService {
     'Permanent Marker',
   ];
 
+  /// خطوط أونلاين: تُحمَّل من جوجل عند أول استخدام (تحتاج إنترنت أول مرة) ثم تُخزَّن.
+  static const Map<String, List<String>> onlineArabic = {
+    'الترند': ['Alexandria', 'Vazirmatn', 'Zain', 'Playpen Sans Arabic', 'Baloo Bhaijaan 2', 'Blaka'],
+    'إعلانية': ['Blaka Hollow', 'Blaka Ink', 'Kufam', 'Qahiri'],
+    'نسخ وثلث': ['Scheherazade New', 'Noto Naskh Arabic', 'Lateef', 'Ruwudu', 'Gulzar'],
+    'رقعة وفارسي': ['Noto Nastaliq Urdu', 'Mirza', 'Vibes'],
+    'ديواني وكوفي': ['Noto Kufi Arabic', 'Kufam'],
+    'خطوط حرة': ['Rubik', 'Noto Sans Arabic', 'Vazirmatn'],
+    'أخرى': ['Cairo', 'Tajawal', 'Almarai'],
+  };
+  static const List<String> onlineLatin = [
+    'Roboto', 'Open Sans', 'Lato', 'Raleway', 'Nunito', 'Merriweather', 'Dancing Script', 'Satisfy', 'Caveat', 'Great Vibes',
+    'Abril Fatface', 'Russo One', 'Orbitron', 'Press Start 2P', 'Archivo Black', 'Fredoka', 'Kaushan Script', 'Cinzel', 'Teko', 'Rubik',
+  ];
+
+  /// الخطوط المفضلة (تُحفظ أثناء الجلسة).
+  static final Set<String> favorites = {};
+
   /// خطوط رفعها المستخدم (ملفات ttf/otf) — تُحفظ في مجلد التطبيق وتُحمَّل عند الإقلاع.
   static final List<String> custom = [];
 
