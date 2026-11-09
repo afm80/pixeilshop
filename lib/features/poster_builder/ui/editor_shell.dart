@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -60,7 +57,7 @@ class EditorShell extends StatefulWidget {
 
 class _EditorShellState extends State<EditorShell> {
   String? _tool; // أداة مفتوحة بشاشتها
-  bool _addMenu = false, _colorMenu = false, _shapes = false, _fontMenu = false;
+  bool _addMenu = false, _colorMenu = false, _shapes = false;
   int _undoAtOpen = 0;
   bool _touched = false;
 
@@ -76,7 +73,7 @@ class _EditorShellState extends State<EditorShell> {
   void _open(String t) {
     setState(() {
       _tool = t;
-      _addMenu = _colorMenu = _shapes = _fontMenu = false;
+      _addMenu = _colorMenu = _shapes = false;
       _touched = false;
       _undoAtOpen = bloc.state.undoCount;
     });
@@ -128,7 +125,6 @@ class _EditorShellState extends State<EditorShell> {
     'stickers': 'ملصقات',
     'saved': 'تصميم',
     'p:hl': 'تحديد',
-    'fonts_online': 'خطوط أونلاين',
   };
 
   void _touch() {
@@ -339,33 +335,9 @@ class _EditorShellState extends State<EditorShell> {
       case 'crop':
         if (l != null) showCropDialog(context, l, widget.images);
       case 'p:font':
-        _fontButton(l);
+        _pickFont(l);
       default:
         _open(b.tool);
-    }
-  }
-
-  Future<bool> _online() async {
-    try {
-      final r = await InternetAddress.lookup('fonts.gstatic.com').timeout(const Duration(seconds: 2));
-      return r.isNotEmpty && r.first.rawAddress.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// بدون إنترنت: قائمة الأوفلاين مباشرة بلا قائمة اختيار. مع الإنترنت: أوفلاين / أونلاين.
-  Future<void> _fontButton(Layer? l) async {
-    if (_fontMenu) {
-      setState(() => _fontMenu = false);
-      return;
-    }
-    final on = await _online();
-    if (!mounted) return;
-    if (on) {
-      setState(() => _fontMenu = true);
-    } else {
-      _pickFont(l);
     }
   }
 
@@ -611,38 +583,6 @@ class _EditorShellState extends State<EditorShell> {
             const Positioned.fill(child: CustomPaint(painter: DotsPainter())),
             Positioned.fill(child: CanvasView(images: widget.images, controller: ec, onEditText: widget.onEditText)),
             if (layersMode) _layersOverlay(st),
-            if (_fontMenu && !inTool && l != null)
-              Align(
-                alignment: Alignment.bottomLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(left: 80, bottom: 6),
-                  decoration: BoxDecoration(color: const Color(0xFF333333), borderRadius: BorderRadius.circular(6)),
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      for (final it in [('خطوط أوفلاين', Icons.font_download_outlined, 0), ('خطوط أونلاين', Icons.cloud_outlined, 1)])
-                        InkWell(
-                          onTap: () {
-                            setState(() => _fontMenu = false);
-                            if (it.$3 == 0) {
-                              _pickFont(l);
-                            } else {
-                              _open('fonts_online');
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                            child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Text(it.$1, style: const TextStyle(fontSize: 13)),
-                              const SizedBox(width: 14),
-                              Icon(it.$2, color: _yellow, size: 24),
-                            ]),
-                          ),
-                        ),
-                    ]),
-                  ),
-                ),
-              ),
             if (_colorMenu && !inTool && l != null)
               _floating(al: Alignment.bottomLeft, [
                 for (final p in const [('لون واحد', 'p:color', Icons.format_color_fill), ('تدرج', 'grad', Icons.gradient), ('نمط', 'pattern', Icons.texture), ('تلبيس', 'fill', Icons.image_outlined)])

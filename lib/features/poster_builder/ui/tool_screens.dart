@@ -47,8 +47,6 @@ class ToolCtx {
 /// ارتفاع منطقة الأداة السفلية.
 double toolHeight(String t) {
   switch (t) {
-    case 'fonts_online':
-      return 420;
     case 'grad':
       return 118;
     case 'pattern':
@@ -384,9 +382,6 @@ Widget? buildToolBody(String t, ToolCtx c) {
               x.grad1 = v;
             })),
       ]);
-    case 'fonts_online':
-      if (l == null) return null;
-      return _OnlineFonts(c: c, l: l);
     case 'brush':
       return _Brush(c: c);
     case 'stickers':
@@ -546,108 +541,5 @@ class _Grad extends StatelessWidget {
         ),
       ),
     ]);
-  }
-}
-
-class _OnlineFonts extends StatefulWidget {
-  const _OnlineFonts({required this.c, required this.l});
-  final ToolCtx c;
-  final Layer l;
-  @override
-  State<_OnlineFonts> createState() => _OnlineFontsState();
-}
-
-class _OnlineFontsState extends State<_OnlineFonts> {
-  bool _latin = false;
-  String _group = FontService.onlineArabic.keys.first;
-
-  Future<void> _use(String f) async {
-    await FontService.ensure(f, timeout: const Duration(seconds: 10));
-    if (mounted) widget.c.mut((x) => x.font = f);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final fonts = _latin ? FontService.onlineLatin : (FontService.onlineArabic[_group] ?? const <String>[]);
-    final sample = _latin ? 'Abc Xyz' : 'أبجد هوز';
-    Widget tab(String t, bool on, VoidCallback f) => InkWell(
-          onTap: f,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            alignment: Alignment.center,
-            color: on ? const Color(0xFF3A3A3A) : null,
-            child: Text(t, style: const TextStyle(fontSize: 14)),
-          ),
-        );
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Column(children: [
-        SizedBox(
-          height: 44,
-          child: Row(children: [
-            tab('إنجليزي', _latin, () => setState(() => _latin = true)),
-            tab('عربي', !_latin, () => setState(() => _latin = false)),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Text(widget.l.font, style: const TextStyle(color: kYellow, fontSize: 12)),
-            ),
-          ]),
-        ),
-        if (!_latin)
-          Container(
-            height: 44,
-            color: const Color(0xFF2B2B2B),
-            child: ListView(scrollDirection: Axis.horizontal, children: [
-              for (final g in FontService.onlineArabic.keys)
-                InkWell(
-                  onTap: () => setState(() => _group = g),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _group == g ? const Color(0xFF3A3A3A) : null,
-                      border: Border(bottom: BorderSide(color: _group == g ? Colors.white : Colors.transparent, width: 2)),
-                    ),
-                    child: Text(g, style: const TextStyle(fontSize: 13)),
-                  ),
-                ),
-            ]),
-          ),
-        Expanded(
-          child: GridView.builder(
-            padding: EdgeInsets.zero,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisExtent: 70),
-            itemCount: fonts.length,
-            itemBuilder: (_, i) {
-              final f = fonts[i];
-              final sel = widget.l.font == f;
-              final fav = FontService.favorites.contains(f);
-              return InkWell(
-                onTap: () => _use(f),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: sel ? kYellow : null,
-                    border: const Border(bottom: BorderSide(color: Colors.white10)),
-                  ),
-                  child: Row(children: [
-                    SizedBox(width: 30, child: Center(child: Text('${i + 1}-', style: TextStyle(fontSize: 12, color: sel ? Colors.black : Colors.white)))),
-                    Expanded(
-                      child: Center(
-                        child: Text(sample, style: FontService.style(f, size: 24, color: sel ? Colors.black : Colors.white)),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => setState(() => fav ? FontService.favorites.remove(f) : FontService.favorites.add(f)),
-                      child: SizedBox(width: 34, child: Icon(fav ? Icons.star : Icons.star_border, size: 20, color: fav ? kYellow : (sel ? Colors.black : Colors.white38))),
-                    ),
-                  ]),
-                ),
-              );
-            },
-          ),
-        ),
-      ]),
-    );
   }
 }
