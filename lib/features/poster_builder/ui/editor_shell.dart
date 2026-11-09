@@ -11,6 +11,8 @@ import 'crop_dialog.dart';
 import 'editor_panel.dart';
 import 'font_picker.dart';
 import 'text_dialog.dart';
+import 'tool_screens.dart';
+import '../model/doc.dart';
 
 const _bar = Color(0xFF252525);
 const _yellow = Color(0xFFFFC400);
@@ -57,6 +59,7 @@ class _EditorShellState extends State<EditorShell> {
   String? _tool; // أداة مفتوحة بشاشتها
   bool _addMenu = false, _colorMenu = false, _shapes = false;
   int _undoAtOpen = 0;
+  bool _touched = false;
 
   EditorController get ec => widget.controller;
   CanvasBloc get bloc => context.read<CanvasBloc>();
@@ -71,8 +74,12 @@ class _EditorShellState extends State<EditorShell> {
     setState(() {
       _tool = t;
       _addMenu = _colorMenu = _shapes = false;
+      _touched = false;
       _undoAtOpen = bloc.state.undoCount;
     });
+    if (t == 'brush') {
+      ec.brushOn = true;
+    }
     ec.setTool(t);
   }
 
@@ -110,9 +117,58 @@ class _EditorShellState extends State<EditorShell> {
     'bg': 'الحجم',
     'bgcolor': 'اللون',
     'layers': 'الطبقات',
+    'dfilters': 'فلاتر',
+    'grad': 'تدرج',
+    'pattern': 'نمط',
+    'fill': 'تلبيس',
+    'brush': 'ارسم',
+    'stickers': 'ملصقات',
+    'saved': 'تصميم',
+    'p:hl': 'تحديد',
   };
 
+  void _touch() {
+    if (!_touched) {
+      _touched = true;
+      bloc.add(const CheckpointRequested());
+    }
+  }
+
   void _mut(void Function(Layer) f, {bool commit = true}) => bloc.add(LayerMutated(f, commit: commit));
+
+  void _tmut(void Function(Layer) f) {
+    _touch();
+    bloc.add(LayerMutated(f));
+  }
+
+  void _tdoc(void Function(Doc) f) {
+    _touch();
+    bloc.add(DocMutated(f));
+  }
+
+  Future<void> _addText(String t, {String? font, double? fontSize, double? width}) async {
+    await FontService.ensure(font ?? 'Cairo');
+    bloc.add(TextLayerAdded(t, font: font, fontSize: fontSize, width: width, bold: font == null ? null : false));
+  }
+
+  Future<void> _addImg(String path, int w, int h) async {
+    await widget.images.ensure(path);
+    if (mounted) bloc.add(ImageLayerAdded(path, w, h));
+  }
+
+  ToolCtx _ctx(Layer? l, Doc d) => ToolCtx(
+        context: context,
+        layer: l,
+        doc: d,
+        mut: _tmut,
+        mutDoc: _tdoc,
+        ec: ec,
+        images: widget.images,
+        addText: _addText,
+        addShape: (k) => bloc.add(ShapeLayerAdded(k)),
+        addImage: _addImg,
+        onEditText: widget.onEditText,
+      );
 
   Future<void> _newText() async {
     setState(() => _addMenu = false);
@@ -134,7 +190,7 @@ class _EditorShellState extends State<EditorShell> {
   // ───────── الشريط العلوي ─────────
   Widget _topMain() {
     return BlocBuilder<CanvasBloc, CanvasState>(builder: (context, st) {
-      Widget ic(IconData i, VoidCallback? f, {int badge = 0, Color c = Colors.white}) => Stack(alignment: Alignment.center, children: [
+      Widget ic(IconData i, VoidCallback? f, {int badge = 0, Color c = kYellow}) => Stack(alignment: Alignment.center, children: [
             IconButton(onPressed: f, icon: Icon(i, color: f == null ? Colors.white30 : c, size: 26)),
             if (badge > 0)
               Positioned(
@@ -149,7 +205,7 @@ class _EditorShellState extends State<EditorShell> {
           textDirection: TextDirection.ltr,
           child: Row(children: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.download_for_offline_outlined, color: kYellow, size: 28),
               color: const Color(0xFF333333),
               onSelected: (v) {
                 switch (v) {
@@ -182,15 +238,17 @@ class _EditorShellState extends State<EditorShell> {
             const Spacer(),
             ic(Icons.undo, st.canUndo ? () => bloc.add(const UndoRequested()) : null, badge: st.undoCount),
             ic(Icons.redo, st.canRedo ? () => bloc.add(const RedoRequested()) : null, badge: st.redoCount),
-            ic(_addMenu ? Icons.close : Icons.add_circle, () => setState(() {
+            ic(_addMenu ? Icons.close : Icons.add_box_outlined, () => setState(() {
                   _addMenu = !_addMenu;
                   _colorMenu = false;
-                }), c: _yellow),
+                })),
           ]),
         ),
       );
     });
   }
+
+  String _stripTool(String t) => t.startsWith('p:') ? t.substring(2) : t;
 
   Widget _topTool() {
     return Container(
@@ -200,7 +258,8 @@ class _EditorShellState extends State<EditorShell> {
         textDirection: TextDirection.ltr,
         child: Row(children: [
           IconButton(onPressed: () => _close(cancel: true), icon: const Icon(Icons.close, color: _yellow, size: 32)),
-          Expanded(child: Center(child: Text(_titles[_tool] ?? '', style: const TextStyle(color: _yellow, fontSize: 17)))),
+          Expanded(child: Center(child: Text(_titles[_tool] ?? '', style: const TextStyle(color: Colors.white, fontSize: 15)))),
+          ...toolExtras(_stripTool(_tool!), _ctx(bloc.state.selected, bloc.state.doc)),
           IconButton(onPressed: _close, icon: const Icon(Icons.check, color: _yellow, size: 32)),
         ]),
       ),
@@ -242,6 +301,7 @@ class _EditorShellState extends State<EditorShell> {
           (icon: Icons.waves, label: 'تقويس', tool: 'p:curve'),
           (icon: Icons.view_in_ar, label: 'العمق', tool: 'p:depth'),
           (icon: Icons.format_italic, label: 'إنحناء', tool: 'p:skew'),
+          (icon: Icons.highlight, label: 'تحديد', tool: 'p:hl'),
           (icon: Icons.flip_to_back, label: 'إنعكاس', tool: 'p:effects'),
           (icon: Icons.opacity, label: 'الشفافية', tool: 'opacity'),
           (icon: Icons.layers, label: 'وضع الدمج', tool: 'p:blend'),
@@ -313,7 +373,7 @@ class _EditorShellState extends State<EditorShell> {
         child: SizedBox(
           width: 72,
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(i, color: on ? _yellow : Colors.white, size: 26),
+            Icon(i, color: _yellow, size: 26),
             const SizedBox(height: 4),
             Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.white70)),
           ]),
@@ -330,11 +390,11 @@ class _EditorShellState extends State<EditorShell> {
         ),
       );
 
-  Widget _addMenuW() => _floating([
+  List<Widget> _addItems() => [
         _item(Icons.title, 'إضافة نص', _newText),
         _item(Icons.dashboard_customize_outlined, 'تصميم', () {
           setState(() => _addMenu = false);
-          _open('add');
+          _open('saved');
         }),
         _item(Icons.photo_library_outlined, 'من الاستوديو', _gallery),
         _item(Icons.category_outlined, 'هندسيات', () => setState(() {
@@ -343,13 +403,13 @@ class _EditorShellState extends State<EditorShell> {
             })),
         _item(Icons.brush, 'ارسم', () {
           setState(() => _addMenu = false);
-          _open('add');
+          _open('brush');
         }),
         _item(Icons.emoji_emotions_outlined, 'ملصقات', () {
           setState(() => _addMenu = false);
-          _open('add');
+          _open('stickers');
         }),
-      ]);
+      ];
 
   Widget _shapesRow() {
     const items = <(String, ShapeKind)>[
@@ -398,35 +458,116 @@ class _EditorShellState extends State<EditorShell> {
     );
   }
 
-  Widget _toolBody(Layer? l) {
+  Widget _toolBody(Layer? l, Doc d) {
     final t = _tool!;
-    switch (t) {
-      case 'opacity':
-        if (l == null) break;
-        return _slider('الشفافية', l.opacity, 0, 1, (v) => _mut((x) => x.opacity = v, commit: false));
-      case 'fsize':
-        if (l == null) break;
-        return _slider('الحجم', l.fontSize, 8, 400, (v) => _mut((x) => x.fontSize = v, commit: false), digits: 0);
-      case 'lh':
-        if (l == null) break;
-        return _slider('ارتفاع السطر', l.lineHeight, 0.6, 3, (v) => _mut((x) => x.lineHeight = v, commit: false));
-      case 'filters':
-        return EditorPanel(controller: ec, images: widget.images, onEditNewText: widget.onEditText, only: 'layer', part: 'image');
-      case 'dfilters':
-        return EditorPanel(controller: ec, images: widget.images, onEditNewText: widget.onEditText, only: 'color');
-      case 'bg':
-      case 'bgcolor':
-        return EditorPanel(controller: ec, images: widget.images, onEditNewText: widget.onEditText, only: 'bg');
-      case 'layers':
-        return EditorPanel(controller: ec, images: widget.images, onEditNewText: widget.onEditText, only: 'layers');
-      case 'add':
-        return EditorPanel(controller: ec, images: widget.images, onEditNewText: widget.onEditText, only: 'add');
-      default:
-        if (t.startsWith('p:')) {
-          return EditorPanel(controller: ec, images: widget.images, onEditNewText: widget.onEditText, only: 'layer', part: t.substring(2));
-        }
+    final key = _stripTool(t);
+    final w = buildToolBody(key, _ctx(l, d));
+    if (w != null) return w;
+    if (t == 'layers') return const SizedBox();
+    String? only, part;
+    if (t == 'add' || t == 'bg' || t == 'layers') {
+      only = t;
+    } else if (t == 'fill') {
+      only = 'layer';
+      part = 'color';
+    } else if (t == 'dfilters') {
+      only = 'color';
+    } else if (t == 'bgcolor') {
+      only = 'bg';
+    } else if (t.startsWith('p:')) {
+      only = 'layer';
+      part = key;
+    } else if (t == 'filters') {
+      only = 'layer';
+      part = 'image';
     }
-    return const SizedBox();
+    return EditorPanel(controller: ec, images: widget.images, onEditNewText: widget.onEditText, only: only, part: part);
+  }
+
+  double _toolH() {
+    final t = _tool!;
+    if (t == 'layers') return 0;
+    return toolHeight(_stripTool(t));
+  }
+
+  Widget _layersOverlay(CanvasState st) {
+    final layers = st.doc.layers;
+    final n = layers.length;
+    String label(Layer l) {
+      switch (l.type) {
+        case LayerType.text:
+          final t = l.text.trim().replaceAll('\n', ' ');
+          return t.isEmpty ? 'نص' : (t.length > 20 ? '${t.substring(0, 20)}…' : t);
+        case LayerType.image:
+          return 'صورة';
+        case LayerType.shape:
+          return 'شكل';
+        case LayerType.draw:
+          return 'رسم';
+      }
+    }
+
+    IconData icon(Layer l) => switch (l.type) {
+          LayerType.text => Icons.title,
+          LayerType.image => Icons.image_outlined,
+          LayerType.shape => Icons.category_outlined,
+          LayerType.draw => Icons.brush,
+        };
+    Widget sm(IconData i, VoidCallback f) => InkWell(onTap: f, child: SizedBox(width: 30, height: 28, child: Icon(i, size: 18, color: Colors.white70)));
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: (n * 60.0 + 4).clamp(60.0, 330.0),
+      child: Material(
+        color: const Color(0xFF252525),
+        child: ReorderableListView.builder(
+          padding: EdgeInsets.zero,
+          buildDefaultDragHandles: false,
+          itemCount: n,
+          onReorder: (o, nw) {
+            if (nw > o) nw -= 1;
+            bloc.add(LayerReordered(n - 1 - o, n - 1 - nw));
+          },
+          itemBuilder: (context, i) {
+            final l = layers[n - 1 - i];
+            final sel = l.id == st.selectedId;
+            return Container(
+              key: ValueKey(l.id),
+              height: 60,
+              decoration: BoxDecoration(color: sel ? const Color(0xFF333333) : null, border: const Border(bottom: BorderSide(color: Colors.white10))),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: InkWell(
+                  onTap: () => bloc.add(LayerSelected(l.id)),
+                  child: Row(children: [
+                    IconButton(onPressed: () => bloc.add(LayerRemoved(l.id)), icon: const Icon(Icons.delete_outline, size: 22, color: Colors.white70)),
+                    Expanded(
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(icon(l), size: 20, color: Colors.white70),
+                        const SizedBox(width: 8),
+                        Flexible(child: Text(label(l), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14))),
+                      ]),
+                    ),
+                    Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Row(children: [
+                        sm(Icons.copy_all_outlined, () => bloc.add(LayerDuplicated(l.id))),
+                        sm(l.locked ? Icons.lock : Icons.lock_open, () => bloc.add(LayerMutated((x) => x.locked = !x.locked, id: l.id, commit: true))),
+                      ]),
+                      Row(children: [
+                        sm(l.hidden ? Icons.visibility_off : Icons.visibility, () => bloc.add(LayerMutated((x) => x.hidden = !x.hidden, id: l.id, commit: true))),
+                        sm(Icons.more_vert, () => bloc.add(LayerSelected(l.id))),
+                      ]),
+                    ]),
+                    ReorderableDragStartListener(index: i, child: const SizedBox(width: 40, height: 60, child: Icon(Icons.drag_handle, color: Colors.white70))),
+                  ]),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -434,34 +575,40 @@ class _EditorShellState extends State<EditorShell> {
     return BlocBuilder<CanvasBloc, CanvasState>(builder: (context, st) {
       final l = st.selected;
       final inTool = _tool != null;
+      final layersMode = _tool == 'layers';
       return Column(children: [
         inTool ? _topTool() : _topMain(),
         Expanded(
           child: Stack(children: [
             const Positioned.fill(child: CustomPaint(painter: DotsPainter())),
             Positioned.fill(child: CanvasView(images: widget.images, controller: ec, onEditText: widget.onEditText)),
-            if (_addMenu && !inTool) _addMenuW(),
+            if (layersMode) _layersOverlay(st),
             if (_colorMenu && !inTool && l != null)
               _floating(al: Alignment.bottomLeft, [
-                for (final p in const [('لون واحد', 'solid'), ('تدرج', 'grad'), ('نمط', 'pattern'), ('تلبيس', 'fill')])
-                  _item(Icons.color_lens_outlined, p.$1, () {
+                for (final p in const [('لون واحد', 'p:color', Icons.format_color_fill), ('تدرج', 'grad', Icons.gradient), ('نمط', 'pattern', Icons.texture), ('تلبيس', 'fill', Icons.image_outlined)])
+                  _item(p.$3, p.$1, () {
                     setState(() => _colorMenu = false);
-                    _open('p:color');
+                    _open(p.$2);
                   }),
               ]),
           ]),
         ),
         SafeArea(
           top: false,
-          child: inTool
-              ? Container(
-                  height: 290,
-                  color: const Color(0xFF2B2B2B),
-                  child: SingleChildScrollView(child: _toolBody(l)),
-                )
-              : _shapes
-                  ? _shapesRow()
-                  : _bottomBar(l),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (_addMenu && !inTool)
+              Container(color: _bar, child: Directionality(textDirection: TextDirection.ltr, child: Row(mainAxisAlignment: MainAxisAlignment.center, children: _addItems()))),
+            if (inTool && !layersMode)
+              Container(
+                height: _toolH(),
+                color: const Color(0xFF212121),
+                child: _toolBody(l, st.doc),
+              )
+            else if (_shapes && !inTool)
+              _shapesRow()
+            else
+              Opacity(opacity: layersMode ? 0.35 : 1, child: IgnorePointer(ignoring: layersMode, child: _bottomBar(l))),
+          ]),
         ),
       ]);
     });

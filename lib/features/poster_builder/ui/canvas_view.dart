@@ -610,7 +610,7 @@ class _CanvasViewState extends State<CanvasView> {
               height: h,
               decoration: const BoxDecoration(boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 18)]),
               child: IgnorePointer(
-                ignoring: ec.tool != null && ec.picker == null,
+                ignoring: ec.tool != null && ec.picker == null && !ec.brushOn,
                 child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onScaleStart: (d) => _onStart(d, vs),

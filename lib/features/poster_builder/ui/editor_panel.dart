@@ -1371,10 +1371,6 @@ class _Act extends StatelessWidget {
       );
 }
 
-/// مجموعات عامة تستخدمها شاشات المحرر الجديدة.
-const List<String> kStickerList = _stickers;
-const List<IconData> kIconList = _icons;
-
 // قوائم عامة تستعملها واجهة المحرر الجديدة
 const kStickerList = _stickers;
 const kIconList = _icons;
