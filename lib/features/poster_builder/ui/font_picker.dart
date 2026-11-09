@@ -161,7 +161,7 @@ class _FontPickerState extends State<_FontPicker> {
                   children: [
                     _list(
                       FontService.custom,
-                      'كيف الحال  Abc',
+                      'مرحبا  Abc',
                       header: Padding(
                         padding: const EdgeInsets.all(12),
                         child: FilledButton.icon(
@@ -172,7 +172,7 @@ class _FontPickerState extends State<_FontPicker> {
                         ),
                       ),
                     ),
-                    Column(children: [_subTabs(), Expanded(child: _list(fonts, 'كيف الحال'))]),
+                    Column(children: [_subTabs(), Expanded(child: _list(fonts, 'مرحبا'))]),
                     _list(FontService.latin, 'How are you'),
                   ],
                 ),
