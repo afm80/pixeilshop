@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'user_fonts.g.dart';
+
 /// خطوط جوجل (عربية + إنجليزية) تُحمّل تلقائياً عند أول استخدام ثم تُخزَّن محلياً.
 class FontService {
   static final Set<String> _ready = {};
@@ -72,7 +74,13 @@ class FontService {
   /// عائلة خط أيقونات Material (لطبقات الأيقونات القابلة للتعديل).
   static const String iconFont = 'MaterialIcons';
 
-  static List<String> get all => [...custom, ...arabic, ...latin];
+  /// خطوط المستخدم المدمجة في التطبيق (assets/user_fonts) — أوفلاين دائماً.
+  static final Set<String> bundledUser = {
+    for (final l in kUserArabic.values) ...l,
+    ...kUserLatin,
+  };
+
+  static List<String> get all => [...custom, ...bundledUser, ...arabic, ...latin];
 
   static Future<Directory> _fontsDir() async {
     final base = await getApplicationDocumentsDirectory();
@@ -134,7 +142,7 @@ class FontService {
     final weight = bold ? FontWeight.w700 : FontWeight.w400;
     final fs = italic ? FontStyle.italic : FontStyle.normal;
     // خطوط محلية: أيقونات Material أو خطوط رفعها المستخدم (لا تمر عبر google_fonts)
-    if (family == iconFont || custom.contains(family)) {
+    if (family == iconFont || custom.contains(family) || bundledUser.contains(family)) {
       return TextStyle(
         fontFamily: family,
         fontSize: size,
@@ -187,7 +195,7 @@ class FontService {
   /// ينتظر جاهزية الخط قبل استخدامه (بحد أقصى [timeout]) كي لا يتغير شكل/ارتفاع
   /// النص بعد ظهوره على اللوحة. بدون إنترنت لا يتعطل التطبيق.
   static Future<void> ensure(String family, {Duration timeout = const Duration(seconds: 4)}) async {
-    if (_ready.contains(family) || family == iconFont) return;
+    if (_ready.contains(family) || family == iconFont || bundledUser.contains(family)) return;
     try {
       await preload([family]).timeout(timeout);
     } catch (_) {}
