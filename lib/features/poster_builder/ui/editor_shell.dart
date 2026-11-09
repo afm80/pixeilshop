@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -336,9 +339,33 @@ class _EditorShellState extends State<EditorShell> {
       case 'crop':
         if (l != null) showCropDialog(context, l, widget.images);
       case 'p:font':
-        setState(() => _fontMenu = !_fontMenu);
+        _fontButton(l);
       default:
         _open(b.tool);
+    }
+  }
+
+  Future<bool> _online() async {
+    try {
+      final r = await InternetAddress.lookup('fonts.gstatic.com').timeout(const Duration(seconds: 2));
+      return r.isNotEmpty && r.first.rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// بدون إنترنت: قائمة الأوفلاين مباشرة بلا قائمة اختيار. مع الإنترنت: أوفلاين / أونلاين.
+  Future<void> _fontButton(Layer? l) async {
+    if (_fontMenu) {
+      setState(() => _fontMenu = false);
+      return;
+    }
+    final on = await _online();
+    if (!mounted) return;
+    if (on) {
+      setState(() => _fontMenu = true);
+    } else {
+      _pickFont(l);
     }
   }
 
