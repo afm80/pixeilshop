@@ -21,6 +21,8 @@ jobs:
         run: flutter create --platforms=android --org com.pixeilshop --project-name pixeilshop .
       - name: Patch Android (permissions, minSdk, ML Kit)
         run: python3 tool/patch_android.py
+      - name: Register my fonts (assets/user_fonts)
+        run: pip install fonttools && python3 tool/scan_fonts.py
       - name: Bundle fonts (offline)
         run: python3 tool/fetch_fonts.py
       - run: flutter pub get
