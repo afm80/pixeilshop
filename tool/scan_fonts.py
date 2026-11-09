@@ -8,6 +8,7 @@
 """
 import hashlib
 import json
+import os
 import pathlib
 import re
 import sys
@@ -21,8 +22,42 @@ LATIN_DIRS = {'english', 'en', 'latin', 'إنجليزي', 'انجليزي', 'إ�
 
 try:
     from fontTools.ttLib import TTFont
+    from fontTools import subset as ftsubset
 except Exception:  # noqa: BLE001
     TTFont = None
+    ftsubset = None
+
+MIN = ROOT / 'assets' / 'user_fonts_min'
+# عربي + لاتيني + أرقام + ترقيم + أشكال العرض العربية (للربط)
+RANGES = [(0x20, 0x7E), (0xA0, 0xFF), (0x2000, 0x206F), (0x20A0, 0x20CF), (0x0600, 0x06FF), (0x0750, 0x077F),
+          (0x08A0, 0x08FF), (0xFB50, 0xFDFF), (0xFE70, 0xFEFF), (0x25CC, 0x25CC)]
+UNICODES = [c for a, b in RANGES for c in range(a, b + 1)]
+
+
+def minimize(path, rel):
+    """يقلّم الخط إلى أقل حجم ممكن مع إبقاء ميزات الربط. يعيد المسار الجديد أو الأصل عند الفشل/عدم الربح."""
+    if ftsubset is None or os.environ.get('SUBSET', '1') == '0':
+        return rel
+    try:
+        out = MIN / (hashlib.sha1(rel.encode()).hexdigest()[:10] + path.suffix.lower())
+        MIN.mkdir(parents=True, exist_ok=True)
+        o = ftsubset.Options()
+        o.layout_features = ['*']
+        o.name_IDs = ['*']
+        o.glyph_names = False
+        o.notdef_outline = True
+        o.hinting = False
+        o.drop_tables += ['DSIG']
+        f = ftsubset.load_font(str(path), o, dontLoadGlyphNames=True)
+        sub = ftsubset.Subsetter(o)
+        sub.populate(unicodes=UNICODES)
+        sub.subset(f)
+        ftsubset.save_font(f, str(out), o)
+        if out.stat().st_size < path.stat().st_size:
+            return out.relative_to(ROOT).as_posix()
+    except Exception as e:  # noqa: BLE001
+        print('تعذر التقليم، يُستعمل الأصل:', path.name, e)
+    return rel
 
 
 def dstr(s):
@@ -95,7 +130,7 @@ for p in files:
     names[name] = p.name
     cat = parts[0] if len(parts) > 1 else guess(name, p.name, weight)
     seen.add(name)
-    entries.append((name, rel))
+    entries.append((name, minimize(p, rel)))
     if cat.lower() in LATIN_DIRS or not is_ar:
         la.append(name)
     else:
@@ -133,4 +168,10 @@ if skipped:
     print('--- تم تجاهل %d ملفاً ---' % len(skipped))
     for n, why in skipped:
         print('  ', n, '←', why)
+try:
+    before = sum(p.stat().st_size for p in files)
+    after = sum((ROOT / r).stat().st_size for _, r in entries)
+    print('الحجم قبل التقليم: %.1f MB ← بعده: %.1f MB' % (before / 1e6, after / 1e6))
+except Exception:  # noqa: BLE001
+    pass
 print('خطوط مسجّلة:', len(entries), '| عربي:', sum(len(v) for v in ar.values()), '| إنجليزي:', len(la))
