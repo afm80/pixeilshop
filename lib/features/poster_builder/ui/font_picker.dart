@@ -81,7 +81,7 @@ class _FontPickerState extends State<_FontPicker> {
   Widget build(BuildContext context) {
     // خطوط المستخدم المدمجة أولاً (مرتّبة من السكربت) ثم المرفوعة من الجهاز ثم خطوط التطبيق
     final txt = widget.sample.trim().replaceAll('\n', ' ');
-    final ar = _uniq([...kUserArabic, ...FontService.arabic]);
+    final ar = _uniq([for (final l in kUserArabic.values) ...l, ...FontService.arabic]);
     final en = _uniq([...kUserLatin, ...FontService.latin]);
     return DefaultTabController(
       length: 3,
