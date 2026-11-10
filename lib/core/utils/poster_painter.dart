@@ -18,17 +18,21 @@ void paintDoc(Canvas c, Doc doc, ImageStore images, {bool checker = false}) {
   final rect = Rect.fromLTWH(0, 0, doc.w, doc.h);
   c.save();
   c.clipRect(rect);
-  if (checker && doc.bgKind == 3) _checker(c, rect);
+  if (checker && (doc.bgKind == 3 || doc.bgCorner > 0 || doc.bgOpacity < 0.999)) _checker(c, rect);
 
   final useGlobal = doc.adjust.hasMatrix;
-  if (useGlobal) {
-    c.saveLayer(rect, Paint()..colorFilter = ColorFilter.matrix(ColorMatrices.forAdjust(doc.adjust)));
+  final useNoise = doc.adjust.hasNoise;
+  if (useGlobal || useNoise) {
+    final p = Paint();
+    if (useGlobal) p.colorFilter = ColorFilter.matrix(ColorMatrices.forAdjust(doc.adjust));
+    c.saveLayer(rect, p);
   }
-  _paintBackground(c, doc, images, rect);
+  _paintBackgroundStyled(c, doc, images, rect);
   for (final l in doc.layers) {
     if (!l.hidden) _paintLayer(c, l, images);
   }
-  if (useGlobal) c.restore();
+  if (useNoise) _noise(c, rect, doc.adjust.noise);
+  if (useGlobal || useNoise) c.restore();
 
   if (doc.adjust.vignette > 0) {
     final v = doc.adjust.vignette.clamp(0.0, 1.0).toDouble();
@@ -46,6 +50,54 @@ void paintDoc(Canvas c, Doc doc, ImageStore images, {bool checker = false}) {
     );
   }
   c.restore();
+}
+
+/// تشويش (حبيبات) فوق ما رُسم داخل الطبقة الحالية فقط.
+void _noise(Canvas c, Rect r, double amount) {
+  final a = amount.clamp(0.0, 1.0).toDouble();
+  final rnd = math.Random(7);
+  final n = (r.width * r.height / 40).clamp(500, 60000).toInt();
+  final dark = Float32List(n), light = Float32List(n);
+  for (var i = 0; i < n; i += 2) {
+    dark[i] = r.left + rnd.nextDouble() * r.width;
+    dark[i + 1] = r.top + rnd.nextDouble() * r.height;
+    light[i] = r.left + rnd.nextDouble() * r.width;
+    light[i + 1] = r.top + rnd.nextDouble() * r.height;
+  }
+  final w = math.max(1.5, math.max(r.width, r.height) / 400);
+  c.drawRawPoints(ui.PointMode.points, dark, Paint()..blendMode = BlendMode.srcATop..strokeWidth = w..color = Color.fromRGBO(0, 0, 0, 0.55 * a));
+  c.drawRawPoints(ui.PointMode.points, light, Paint()..blendMode = BlendMode.srcATop..strokeWidth = w..color = Color.fromRGBO(255, 255, 255, 0.55 * a));
+}
+
+/// الخلفية مع الزوايا والإطار والشفافية والقلب.
+void _paintBackgroundStyled(Canvas c, Doc d, ImageStore images, Rect rect) {
+  final plain = d.bgCorner <= 0 && d.bgStrokeW <= 0 && d.bgOpacity >= 0.999 && !d.bgFlip;
+  if (plain) {
+    _paintBackground(c, d, images, rect);
+    return;
+  }
+  final rr = RRect.fromRectAndRadius(rect, Radius.circular(d.bgCorner.clamp(0.0, math.min(d.w, d.h) / 2).toDouble()));
+  if (d.bgOpacity < 0.999) {
+    c.saveLayer(rect, Paint()..color = Color.fromRGBO(255, 255, 255, d.bgOpacity.clamp(0.0, 1.0).toDouble()));
+  }
+  c.save();
+  c.clipRRect(rr, doAntiAlias: true);
+  if (d.bgFlip) {
+    c.translate(d.w, 0);
+    c.scale(-1, 1);
+  }
+  _paintBackground(c, d, images, rect);
+  c.restore();
+  if (d.bgStrokeW > 0) {
+    c.drawRRect(
+      rr.deflate(d.bgStrokeW / 2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = d.bgStrokeW
+        ..color = Color(d.bgStrokeColor),
+    );
+  }
+  if (d.bgOpacity < 0.999) c.restore();
 }
 
 void _checker(Canvas c, Rect r) {
@@ -129,7 +181,7 @@ void _paintLayer(Canvas c, Layer l, ImageStore images) {
   c.scale(l.flipX ? -l.scale : l.scale, l.scale);
 
   final hasAdj = l.adj.hasMatrix;
-  final needsLayer = l.opacity < 0.999 || l.blend != 0 || hasAdj;
+  final needsLayer = l.opacity < 0.999 || l.blend != 0 || hasAdj || l.adj.hasNoise;
   if (needsLayer) {
     final p = Paint()
       ..blendMode = kBlends[l.blend.clamp(0, kBlends.length - 1).toInt()].mode
@@ -158,6 +210,7 @@ void _paintLayer(Canvas c, Layer l, ImageStore images) {
       break;
   }
 
+  if (l.adj.hasNoise) _noise(c, bounds, l.adj.noise);
   if (needsLayer) c.restore();
   c.restore();
 }

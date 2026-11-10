@@ -113,6 +113,13 @@ class ColorMatrices {
         0, 0, 0, 1, 0,
       ];
 
+  static const List<double> _invert = [
+    -1, 0, 0, 0, 255, //
+    0, -1, 0, 0, 255,
+    0, 0, -1, 0, 255,
+    0, 0, 0, 1, 0,
+  ];
+
   static const List<double> _sepia = [
     0.393, 0.769, 0.189, 0, 0, //
     0.349, 0.686, 0.168, 0, 0,
@@ -164,6 +171,9 @@ class ColorMatrices {
     if (a.tint != 0) m = compose(m, tint(a.tint));
     if (a.fade != 0) m = compose(m, fade(a.fade));
     if (a.hue != 0) m = compose(m, hueRotate(a.hue));
+    if (a.sepia != 0) m = compose(m, lerp(identity, _sepia, a.sepia.clamp(0.0, 1.0).toDouble()));
+    if (a.gray != 0) m = compose(m, saturation(1 - a.gray.clamp(0.0, 1.0).toDouble()));
+    if (a.invert != 0) m = compose(m, lerp(identity, _invert, a.invert.clamp(0.0, 1.0).toDouble()));
     return m;
   }
 }
