@@ -22,17 +22,39 @@ void paintDoc(Canvas c, Doc doc, ImageStore images, {bool checker = false}) {
 
   final useGlobal = doc.adjust.hasMatrix;
   final useNoise = doc.adjust.hasNoise;
-  if (useGlobal || useNoise) {
+  final smooth = ColorMatrices.smoothFor(doc.adjust);
+  if (useGlobal || useNoise || smooth > 0.01) {
     final p = Paint();
     if (useGlobal) p.colorFilter = ColorFilter.matrix(ColorMatrices.forAdjust(doc.adjust));
     c.saveLayer(rect, p);
   }
-  _paintBackgroundStyled(c, doc, images, rect);
-  for (final l in doc.layers) {
-    if (!l.hidden) _paintLayer(c, l, images);
+  void content(Canvas cc) {
+    _paintBackgroundStyled(cc, doc, images, rect);
+    for (final l in doc.layers) {
+      if (!l.hidden) _paintLayer(cc, l, images);
+    }
+  }
+
+  if (smooth > 0.01) {
+    // تجميل: المحتوى + نسخة مموّهة بشفافية جزئية فيُنعَّم الجلد ويبقى الحدّ العام
+    final rec = ui.PictureRecorder();
+    content(Canvas(rec, rect));
+    final pic = rec.endRecording();
+    c.drawPicture(pic);
+    final sigma = math.max(doc.w, doc.h) / 200 * smooth + 1;
+    c.saveLayer(
+      rect,
+      Paint()
+        ..imageFilter = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.clamp)
+        ..color = Color.fromRGBO(255, 255, 255, (0.55 * smooth).clamp(0.0, 0.9).toDouble()),
+    );
+    c.drawPicture(pic);
+    c.restore();
+  } else {
+    content(c);
   }
   if (useNoise) _noise(c, rect, doc.adjust.noise);
-  if (useGlobal || useNoise) c.restore();
+  if (useGlobal || useNoise || smooth > 0.01) c.restore();
 
   if (doc.adjust.vignette > 0) {
     final v = doc.adjust.vignette.clamp(0.0, 1.0).toDouble();
