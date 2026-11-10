@@ -9,6 +9,10 @@ class Adjust {
     this.fade = 0,
     this.hue = 0,
     this.vignette = 0,
+    this.sepia = 0,
+    this.gray = 0,
+    this.invert = 0,
+    this.noise = 0,
     this.preset = 0,
     this.presetAmount = 1,
   });
@@ -21,6 +25,10 @@ class Adjust {
   double fade; // 0..1
   double hue; // -180..180 (درجات)
   double vignette; // 0..1
+  double sepia; // 0..1 سيبيا
+  double gray; // 0..1 إزالة اللون
+  double invert; // 0..1 عكس
+  double noise; // 0..1 تشويش
   int preset; // 0 = بدون
   double presetAmount; // 0..1
 
@@ -33,7 +41,12 @@ class Adjust {
       tint != 0 ||
       fade != 0 ||
       hue != 0 ||
+      sepia != 0 ||
+      gray != 0 ||
+      invert != 0 ||
       preset != 0;
+
+  bool get hasNoise => noise > 0;
 
   void reset() {
     brightness = 0;
@@ -44,6 +57,10 @@ class Adjust {
     fade = 0;
     hue = 0;
     vignette = 0;
+    sepia = 0;
+    gray = 0;
+    invert = 0;
+    noise = 0;
     preset = 0;
     presetAmount = 1;
   }
@@ -59,6 +76,10 @@ class Adjust {
         'f': fade,
         'h': hue,
         'v': vignette,
+        'se': sepia,
+        'gr': gray,
+        'iv': invert,
+        'no': noise,
         'p': preset,
         'pa': presetAmount,
       };
@@ -75,6 +96,10 @@ class Adjust {
       fade: d('f'),
       hue: d('h'),
       vignette: d('v'),
+      sepia: d('se'),
+      gray: d('gr'),
+      invert: d('iv'),
+      noise: d('no'),
       preset: (m['p'] as num?)?.toInt() ?? 0,
       presetAmount: d('pa', 1),
     );

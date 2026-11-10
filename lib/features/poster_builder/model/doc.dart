@@ -13,6 +13,11 @@ class Doc {
     this.bgColor2 = 0xFF000000,
     this.bgAngle = 90,
     this.bgPath,
+    this.bgStrokeW = 0,
+    this.bgStrokeColor = 0xFF000000,
+    this.bgCorner = 0,
+    this.bgOpacity = 1,
+    this.bgFlip = false,
     List<Layer>? layers,
     Adjust? adjust,
   })  : layers = layers ?? <Layer>[],
@@ -32,6 +37,10 @@ class Doc {
   int bgColor1, bgColor2;
   double bgAngle;
   String? bgPath;
+  // تنسيق الخلفية (تعمل أزرار الشريط السفلي عند عدم تحديد أي طبقة عليها)
+  double bgStrokeW, bgCorner, bgOpacity;
+  int bgStrokeColor;
+  bool bgFlip;
   List<Layer> layers;
   Adjust adjust; // تعديل لوني شامل على التصميم كله
 
@@ -55,6 +64,11 @@ class Doc {
         'b2': bgColor2,
         'ba': bgAngle,
         'bp': bgPath,
+        'bsw': bgStrokeW,
+        'bsc': bgStrokeColor,
+        'bcr': bgCorner,
+        'bop': bgOpacity,
+        'bfl': bgFlip,
         'ls': layers.map((l) => l.toJson()).toList(),
         'adj': adjust.toJson(),
       };
@@ -69,6 +83,11 @@ class Doc {
         bgColor2: (m['b2'] as num?)?.toInt() ?? 0xFF000000,
         bgAngle: (m['ba'] as num?)?.toDouble() ?? 90,
         bgPath: m['bp'] as String?,
+        bgStrokeW: (m['bsw'] as num?)?.toDouble() ?? 0,
+        bgStrokeColor: (m['bsc'] as num?)?.toInt() ?? 0xFF000000,
+        bgCorner: (m['bcr'] as num?)?.toDouble() ?? 0,
+        bgOpacity: (m['bop'] as num?)?.toDouble() ?? 1,
+        bgFlip: (m['bfl'] as bool?) ?? false,
         layers: ((m['ls'] as List?) ?? const [])
             .map((e) => Layer.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),
