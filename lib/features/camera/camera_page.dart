@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -275,6 +276,17 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     if (ps == null) return const SizedBox.shrink();
     // previewSize أفقي دائماً، والشاشة عمودية.
     Widget cam = CameraPreview(c);
+    final smooth = ColorMatrices.presets[_filter].smooth;
+    if (smooth > 0) {
+      final sigma = math.max(ps.width, ps.height) / 200 * smooth + 1;
+      cam = Stack(fit: StackFit.expand, children: [
+        CameraPreview(c),
+        Opacity(
+          opacity: (0.55 * smooth).clamp(0.0, 0.9).toDouble(),
+          child: ImageFiltered(imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.clamp), child: CameraPreview(c)),
+        ),
+      ]);
+    }
     if (_filter != 0) {
       cam = ColorFiltered(colorFilter: ColorFilter.matrix(ColorMatrices.presets[_filter].matrix), child: cam);
     }
