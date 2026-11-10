@@ -268,6 +268,10 @@ Widget? buildToolBody(String t, ToolCtx c) {
                 x.shOn = true;
                 x.shBlur = v;
               })),
+          StepSlider(label: 'الشفافية', value: l.shOpacity, min: 0, max: 1, digits: 2, onChanged: (v) => c.mut((x) {
+                x.shOn = true;
+                x.shOpacity = v;
+              })),
         ]),
       );
     case 'corners':
@@ -319,6 +323,7 @@ Widget? buildToolBody(String t, ToolCtx c) {
       if (l == null) return null;
       return Column(children: [
         StepSlider(label: 'تقويس', value: l.curve, min: -100, max: 100, onChanged: (v) => c.mut((x) => x.curve = v)),
+        StepSlider(label: 'تباعد الحروف', value: l.letterSpacing, min: -10, max: 60, digits: 1, onChanged: (v) => c.mut((x) => x.letterSpacing = v)),
       ]);
     case 'skew':
       if (l == null) return null;
@@ -440,6 +445,14 @@ class _Brush extends StatelessWidget {
           ColorStrip(ec: ec, current: ec.brushColor, onPick: (v) => ec.update(() => ec.brushColor = v)),
           StepSlider(label: 'السمك', value: ec.brushWidth, min: 2, max: 160, onChanged: (v) => ec.update(() => ec.brushWidth = v)),
           StepSlider(label: 'الشفافية', value: ec.brushOpacity, min: 0.05, max: 1, digits: 2, onChanged: (v) => ec.update(() => ec.brushOpacity = v)),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              ChoiceChip(label: const Text('ممحاة'), selected: ec.brushErase, onSelected: (_) => ec.update(() => ec.brushErase = !ec.brushErase)),
+              const SizedBox(width: 8),
+              ChoiceChip(label: const Text('متقطع'), selected: ec.brushDashed, onSelected: (_) => ec.update(() => ec.brushDashed = !ec.brushDashed)),
+            ]),
+          ),
         ]),
       ),
     );

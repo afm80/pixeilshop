@@ -27,6 +27,7 @@ class _FontPicker extends StatefulWidget {
 
 class _FontPickerState extends State<_FontPicker> {
   late String _sel = widget.current;
+  bool _preview = false;
 
   Future<void> _upload() async {
     final r = await FilePicker.platform.pickFiles(type: FileType.any);
@@ -98,12 +99,22 @@ class _FontPickerState extends State<_FontPicker> {
                   child: Row(
                     children: [
                       IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: _yellow, size: 32)),
+                      IconButton(onPressed: () => setState(() => _preview = !_preview), icon: Icon(_preview ? Icons.visibility : Icons.visibility_off, color: _yellow, size: 28)),
                       const Expanded(child: Center(child: Text('Fonts', style: TextStyle(color: _yellow, fontSize: 17)))),
                       IconButton(onPressed: () => Navigator.pop(context, _sel), icon: const Icon(Icons.check, color: _yellow, size: 32)),
                     ],
                   ),
                 ),
               ),
+              if (_preview)
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(minHeight: 110),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.all(12),
+                  color: const Color(0xFF2B2B2B),
+                  child: Text(txt.isEmpty ? 'مرحبا' : txt, textAlign: TextAlign.center, style: FontService.style(_sel, size: 40, color: Colors.white)),
+                ),
               Container(
                 color: const Color(0xFF252525),
                 child: const TabBar(
