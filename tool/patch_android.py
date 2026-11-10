@@ -15,6 +15,15 @@ perms = (
 if 'RECORD_AUDIO' not in s:
     s = s.replace('<application', perms + '    <application', 1)
 
+if 'android.permission.CAMERA' not in s:
+    s = s.replace(
+        '<application',
+        '    <uses-permission android:name="android.permission.CAMERA"/>\n'
+        '    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n'
+        '    <application',
+        1,
+    )
+
 speech_intent = '<intent><action android:name="android.speech.RecognitionService"/></intent>'
 if 'RecognitionService' not in s:
     if '<queries>' in s:
