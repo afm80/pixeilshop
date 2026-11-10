@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -33,6 +35,65 @@ class DotsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant DotsPainter old) => false;
+}
+
+class _ShapeIcon extends CustomPainter {
+  _ShapeIcon(this.kind);
+  final ShapeKind kind;
+  @override
+  void paint(Canvas c, Size s) {
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..color = const Color(0xFFFFC400);
+    final r = Offset.zero & s;
+    final ctr = r.center;
+    final rad = s.width / 2 - 2;
+    Path poly(int n) {
+      final path = Path();
+      for (var i = 0; i < n; i++) {
+        final a = -math.pi / 2 + i * 2 * math.pi / n;
+        final pt = ctr + Offset(math.cos(a), math.sin(a)) * rad;
+        i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+      }
+      return path..close();
+    }
+
+    switch (kind) {
+      case ShapeKind.rect:
+        c.drawRect(r.deflate(3), p);
+      case ShapeKind.circle:
+        c.drawCircle(ctr, rad, p);
+      case ShapeKind.triangle:
+        c.drawPath(poly(3), p);
+      case ShapeKind.cone:
+        c.drawPath(
+          Path()
+            ..moveTo(ctr.dx, 2)
+            ..lineTo(s.width - 6, s.height - 4)
+            ..lineTo(6, s.height - 4)
+            ..close(),
+          p,
+        );
+      case ShapeKind.pentagon:
+        c.drawPath(poly(5), p);
+      case ShapeKind.hexagon:
+        c.drawPath(poly(6), p);
+      case ShapeKind.heptagon:
+        c.drawPath(poly(7), p);
+      case ShapeKind.octagon:
+        c.drawPath(poly(8), p);
+      case ShapeKind.nonagon:
+        c.drawPath(poly(9), p);
+      case ShapeKind.decagon:
+        c.drawPath(poly(10), p);
+      default:
+        c.drawRect(r.deflate(3), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ShapeIcon old) => old.kind != kind;
 }
 
 typedef _Btn = ({IconData icon, String label, String tool});
@@ -213,23 +274,11 @@ class _EditorShellState extends State<EditorShell> {
                     widget.onLeave();
                   case 'export':
                     widget.onExport();
-                  case 'bg':
-                    _open('bg');
-                  case 'grid':
-                    ec.update(() => ec.showGrid = !ec.showGrid);
-                  case 'snap':
-                    ec.update(() => ec.snap = !ec.snap);
-                  case 'reset':
-                    ec.resetView();
                 }
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'leave', child: Text('حفظ والخروج')),
                 PopupMenuItem(value: 'export', child: Text('تصدير')),
-                PopupMenuItem(value: 'bg', child: Text('الخلفية والمقاس')),
-                PopupMenuItem(value: 'grid', child: Text('إظهار/إخفاء الشبكة')),
-                PopupMenuItem(value: 'snap', child: Text('تفعيل/إيقاف المحاذاة')),
-                PopupMenuItem(value: 'reset', child: Text('إعادة ضبط العرض')),
               ],
             ),
             ic(Icons.layers_outlined, () => _open('layers')),
@@ -248,6 +297,7 @@ class _EditorShellState extends State<EditorShell> {
     });
   }
 
+  bool _layersShown = true;
   String _stripTool(String t) => t.startsWith('p:') ? t.substring(2) : t;
 
   Widget _topTool() {
@@ -259,6 +309,8 @@ class _EditorShellState extends State<EditorShell> {
         child: Row(children: [
           IconButton(onPressed: () => _close(cancel: true), icon: const Icon(Icons.close, color: _yellow, size: 32)),
           Expanded(child: Center(child: Text(_titles[_tool] ?? '', style: const TextStyle(color: Colors.white, fontSize: 15)))),
+          if (_tool == 'layers')
+            IconButton(onPressed: () => setState(() => _layersShown = !_layersShown), icon: Icon(_layersShown ? Icons.visibility : Icons.visibility_off, color: _yellow, size: 28)),
           ...toolExtras(_stripTool(_tool!), _ctx(bloc.state.selected, bloc.state.doc)),
           IconButton(onPressed: _close, icon: const Icon(Icons.check, color: _yellow, size: 32)),
         ]),
@@ -272,7 +324,11 @@ class _EditorShellState extends State<EditorShell> {
       return const [
         (icon: Icons.add_circle_outline, label: 'إضافة', tool: 'add'),
         (icon: Icons.palette_outlined, label: 'اللون', tool: 'bgcolor'),
+        (icon: Icons.border_style, label: 'إطار', tool: 'p:border'),
+        (icon: Icons.rounded_corner, label: 'الزوايا', tool: 'p:corners'),
+        (icon: Icons.opacity, label: 'الشفافية', tool: 'opacity'),
         (icon: Icons.tune, label: 'فلاتر', tool: 'dfilters'),
+        (icon: Icons.flip, label: 'قلب', tool: 'flip'),
         (icon: Icons.aspect_ratio, label: 'الحجم', tool: 'bg'),
       ];
     }
@@ -291,22 +347,22 @@ class _EditorShellState extends State<EditorShell> {
         return const [
           (icon: Icons.palette_outlined, label: 'اللون', tool: 'p:color'),
           (icon: Icons.font_download_outlined, label: 'الخطوط', tool: 'p:font'),
-          (icon: Icons.format_size, label: 'الحجم', tool: 'fsize'),
-          (icon: Icons.format_line_spacing, label: 'ارتفاع السطر', tool: 'lh'),
-          (icon: Icons.format_align_center, label: 'المحاذاة', tool: 'align'),
-          (icon: Icons.format_bold, label: 'الشكل', tool: 'bold'),
-          (icon: Icons.format_italic, label: 'ستايل', tool: 'italic'),
-          (icon: Icons.border_style, label: 'إطار', tool: 'p:border'),
-          (icon: Icons.blur_on, label: 'الظل', tool: 'p:shadow'),
+          (icon: Icons.border_style, label: 'إحاطة', tool: 'p:border'),
           (icon: Icons.waves, label: 'تقويس', tool: 'p:curve'),
+          (icon: Icons.blur_on, label: 'الظل', tool: 'p:shadow'),
           (icon: Icons.view_in_ar, label: 'العمق', tool: 'p:depth'),
           (icon: Icons.format_italic, label: 'إنحناء', tool: 'p:skew'),
           (icon: Icons.highlight, label: 'تحديد', tool: 'p:hl'),
           (icon: Icons.flip_to_back, label: 'إنعكاس', tool: 'p:effects'),
           (icon: Icons.opacity, label: 'الشفافية', tool: 'opacity'),
           (icon: Icons.layers, label: 'وضع الدمج', tool: 'p:blend'),
+          (icon: Icons.format_line_spacing, label: 'ارتفاع السطر', tool: 'lh'),
           (icon: Icons.filter_vintage_outlined, label: 'فلاتر', tool: 'filters'),
+          (icon: Icons.format_size, label: 'الحجم', tool: 'fsize'),
           (icon: Icons.flip, label: 'قلب', tool: 'flip'),
+          (icon: Icons.format_align_center, label: 'المحاذاة', tool: 'align'),
+          (icon: Icons.format_bold, label: 'الشكل', tool: 'bold'),
+          (icon: Icons.format_italic, label: 'ستايل', tool: 'italic'),
           (icon: Icons.open_with, label: 'الموقع', tool: 'p:pos'),
         ];
       case LayerType.image:
@@ -323,7 +379,11 @@ class _EditorShellState extends State<EditorShell> {
   void _tap(_Btn b, Layer? l) {
     switch (b.tool) {
       case 'flip':
-        _mut((x) => x.flipX = !x.flipX);
+        if (l == null) {
+          bloc.add(DocMutated((d) => d.bgFlip = !d.bgFlip, commit: true));
+        } else {
+          _mut((x) => x.flipX = !x.flipX);
+        }
       case 'align':
         _mut((x) => x.align = (x.align + 1) % 3);
       case 'bold':
@@ -348,7 +408,7 @@ class _EditorShellState extends State<EditorShell> {
 
   Future<void> _pickFont(Layer? l) async {
     if (l == null) return;
-    final f = await showFontPicker(context, l.font);
+    final f = await showFontPicker(context, l.font, sample: l.text);
     if (f != null) {
       await FontService.ensure(f);
       _mut((x) => x.font = f);
@@ -365,7 +425,14 @@ class _EditorShellState extends State<EditorShell> {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            if (l != null) _item(Icons.arrow_back, 'رجوع', () => bloc.add(const LayerSelected(null))),
+            if (l != null)
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(left: BorderSide(color: _yellow, width: 1.5), top: BorderSide(color: _yellow, width: 1.5)),
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(16)),
+                ),
+                child: _item(Icons.arrow_back, 'رجوع', () => bloc.add(const LayerSelected(null))),
+              ),
             for (final b in items) _item(b.icon, b.label, () => _tap(b, l)),
           ],
         ),
@@ -435,12 +502,28 @@ class _EditorShellState extends State<EditorShell> {
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(scrollDirection: Axis.horizontal, children: [
-          _item(Icons.arrow_back, 'رجوع', () => setState(() => _shapes = false)),
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(left: BorderSide(color: _yellow, width: 1.5), top: BorderSide(color: _yellow, width: 1.5)),
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(16)),
+            ),
+            child: _item(Icons.arrow_back, 'رجوع', () => setState(() => _shapes = false)),
+          ),
           for (final s in items)
-            _item(Icons.crop_square, s.$1, () {
-              bloc.add(ShapeLayerAdded(s.$2));
-              setState(() => _shapes = false);
-            }),
+            InkWell(
+              onTap: () {
+                bloc.add(ShapeLayerAdded(s.$2));
+                setState(() => _shapes = false);
+              },
+              child: SizedBox(
+                width: 72,
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  CustomPaint(size: const Size(28, 28), painter: _ShapeIcon(s.$2)),
+                  const SizedBox(height: 4),
+                  Text(s.$1, maxLines: 1, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                ]),
+              ),
+            ),
         ]),
       ),
     );
@@ -498,6 +581,36 @@ class _EditorShellState extends State<EditorShell> {
   Widget _layersOverlay(CanvasState st) {
     final layers = st.doc.layers;
     final n = layers.length;
+    final showBg = {0, 1, 4}.contains(st.doc.bgKind);
+    void unlock() {
+      bloc.add(DocMutated((d) {
+        final r = Layer.create(LayerType.shape, name: 'خلفية');
+        r.shape = ShapeKind.rect;
+        r.x = d.w / 2;
+        r.y = d.h / 2;
+        r.w = d.w.toDouble();
+        r.h = d.h.toDouble();
+        r.color = d.bgColor1;
+        if (d.bgKind == 1 || d.bgKind == 4) {
+          r.fillKind = d.bgKind == 1 ? 1 : 2;
+          r.grad1 = d.bgColor1;
+          r.grad2 = d.bgColor2;
+          r.gradAngle = d.bgAngle;
+        }
+        r.cornerRadius = d.bgCorner;
+        r.strokeW = d.bgStrokeW;
+        r.strokeColor = d.bgStrokeColor;
+        r.opacity = d.bgOpacity;
+        r.flipX = d.bgFlip;
+        d.layers.insert(0, r);
+        d.bgKind = 3;
+        d.bgCorner = 0;
+        d.bgStrokeW = 0;
+        d.bgOpacity = 1;
+        d.bgFlip = false;
+      }, commit: true));
+    }
+
     String label(Layer l) {
       switch (l.type) {
         case LayerType.text:
@@ -523,10 +636,11 @@ class _EditorShellState extends State<EditorShell> {
       top: 0,
       left: 0,
       right: 0,
-      height: (n * 60.0 + 4).clamp(60.0, 330.0),
+      height: ((n * 60.0 + 4) + (showBg ? 48 : 0)).clamp(60.0, 330.0),
       child: Material(
         color: const Color(0xFF252525),
-        child: ReorderableListView.builder(
+        child: Column(children: [
+          Expanded(child: ReorderableListView.builder(
           padding: EdgeInsets.zero,
           buildDefaultDragHandles: false,
           itemCount: n,
@@ -570,7 +684,31 @@ class _EditorShellState extends State<EditorShell> {
               ),
             );
           },
-        ),
+        )),
+          if (showBg)
+            SizedBox(
+              height: 48,
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(children: [
+                  const SizedBox(width: 12),
+                  TextButton(
+                    onPressed: unlock,
+                    style: TextButton.styleFrom(backgroundColor: _yellow, foregroundColor: Colors.black, minimumSize: const Size(90, 32)),
+                    child: const Text('فك الخلفية'),
+                  ),
+                  const Expanded(
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.crop_square, size: 20, color: Colors.white70),
+                      SizedBox(width: 8),
+                      Text('مستطيل', style: TextStyle(fontSize: 14)),
+                    ]),
+                  ),
+                  const SizedBox(width: 52),
+                ]),
+              ),
+            ),
+        ]),
       ),
     );
   }
@@ -587,7 +725,8 @@ class _EditorShellState extends State<EditorShell> {
           child: Stack(children: [
             const Positioned.fill(child: CustomPaint(painter: DotsPainter())),
             Positioned.fill(child: CanvasView(images: widget.images, controller: ec, onEditText: widget.onEditText)),
-            if (layersMode) _layersOverlay(st),
+            if (layersMode) Positioned.fill(child: ColoredBox(color: Colors.black54)),
+            if (layersMode && _layersShown) _layersOverlay(st),
             if (_colorMenu && !inTool && l != null)
               _floating(al: Alignment.bottomLeft, [
                 for (final p in const [('لون واحد', 'p:color', Icons.format_color_fill), ('تدرج', 'grad', Icons.gradient), ('نمط', 'pattern', Icons.texture), ('تلبيس', 'fill', Icons.image_outlined)])

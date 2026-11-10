@@ -229,7 +229,16 @@ Widget? buildToolBody(String t, ToolCtx c) {
   final l = c.layer;
   switch (t) {
     case 'border':
-      if (l == null) return null;
+      if (l == null) {
+        final d = c.doc;
+        return Column(children: [
+          StepSlider(label: 'العرض', value: d.bgStrokeW, min: 0, max: 60, onChanged: (v) => c.mutDoc((x) => x.bgStrokeW = v)),
+          ColorStrip(ec: c.ec, current: d.bgStrokeColor, onPick: (v) => c.mutDoc((x) {
+                x.bgStrokeColor = v;
+                if (x.bgStrokeW == 0) x.bgStrokeW = 6;
+              }), onClear: () => c.mutDoc((x) => x.bgStrokeW = 0)),
+        ]);
+      }
       return Column(children: [
         StepSlider(label: 'العرض', value: l.strokeW, min: 0, max: 60, onChanged: (v) => c.mut((x) => x.strokeW = v)),
         ColorStrip(ec: c.ec, current: l.strokeColor, onPick: (v) => c.mut((x) {
@@ -259,17 +268,17 @@ Widget? buildToolBody(String t, ToolCtx c) {
                 x.shOn = true;
                 x.shBlur = v;
               })),
-          StepSlider(label: 'الشفافية', value: l.shOpacity, min: 0, max: 1, digits: 2, onChanged: (v) => c.mut((x) {
-                x.shOn = true;
-                x.shOpacity = v;
-              })),
         ]),
       );
     case 'corners':
-      if (l == null) return null;
+      if (l == null) {
+        return StepSlider(label: 'الزوايا', value: c.doc.bgCorner, min: 0, max: math.min(c.doc.w, c.doc.h) / 2, onChanged: (v) => c.mutDoc((x) => x.bgCorner = v));
+      }
       return StepSlider(label: 'الزوايا', value: l.cornerRadius, min: 0, max: 200, onChanged: (v) => c.mut((x) => x.cornerRadius = v));
     case 'opacity':
-      if (l == null) return null;
+      if (l == null) {
+        return StepSlider(label: 'الشفافية', value: c.doc.bgOpacity, min: 0, max: 1, digits: 2, onChanged: (v) => c.mutDoc((x) => x.bgOpacity = v));
+      }
       return StepSlider(label: 'الشفافية', value: l.opacity, min: 0, max: 1, digits: 2, onChanged: (v) => c.mut((x) => x.opacity = v));
     case 'fsize':
       if (l == null) return null;
@@ -310,13 +319,12 @@ Widget? buildToolBody(String t, ToolCtx c) {
       if (l == null) return null;
       return Column(children: [
         StepSlider(label: 'تقويس', value: l.curve, min: -100, max: 100, onChanged: (v) => c.mut((x) => x.curve = v)),
-        StepSlider(label: 'تباعد الحروف', value: l.letterSpacing, min: -10, max: 60, digits: 1, onChanged: (v) => c.mut((x) => x.letterSpacing = v)),
       ]);
     case 'skew':
       if (l == null) return null;
       return Column(children: [
-        StepSlider(label: 'أفقي', value: l.skewX, min: -60, max: 60, onChanged: (v) => c.mut((x) => x.skewX = v)),
-        StepSlider(label: 'عمودي', value: l.skewY, min: -60, max: 60, onChanged: (v) => c.mut((x) => x.skewY = v)),
+        StepSlider(label: 'العرض', value: l.skewX, min: -60, max: 60, onChanged: (v) => c.mut((x) => x.skewX = v)),
+        StepSlider(label: 'الطول', value: l.skewY, min: -60, max: 60, onChanged: (v) => c.mut((x) => x.skewY = v)),
       ]);
     case 'depth':
       if (l == null) return null;
@@ -393,25 +401,28 @@ Widget? buildToolBody(String t, ToolCtx c) {
 }
 
 Widget _adjustSliders(Adjust a, void Function(void Function(Adjust)) set) {
-  Widget row(String label, double v, double min, double max, void Function(Adjust, double) f, {bool plus1 = false}) => StepSlider(
+  Widget row(String label, double v, double min, double max, void Function(Adjust, double) f, {double Function(double)? show, int digits = 0}) => StepSlider(
         label: label,
         value: v,
         min: min,
         max: max,
-        shown: plus1 ? (1 + v) * 100 : v * (max > 1 ? 1 : 100),
+        shown: show == null ? v : show(v),
+        digits: digits,
         onChanged: (n) => set((x) => f(x, n)),
       );
+  double pct(double v) => v * 100;
+  double lvl(double v) => (1 + v) * 100;
   return ListView(
     padding: EdgeInsets.zero,
     children: [
-      row('لمعان', a.brightness, -1, 1, (x, v) => x.brightness = v, plus1: true),
-      row('تباين', a.contrast, -1, 1, (x, v) => x.contrast = v, plus1: true),
-      row('تشبع', a.saturation, -1, 1, (x, v) => x.saturation = v, plus1: true),
-      row('حرارة', a.temperature, -1, 1, (x, v) => x.temperature = v),
-      row('تلوين', a.tint, -1, 1, (x, v) => x.tint = v),
-      row('بهتان', a.fade, 0, 1, (x, v) => x.fade = v),
-      row('درجة اللون', a.hue, -180, 180, (x, v) => x.hue = v),
-      row('تظليل الحواف', a.vignette, 0, 1, (x, v) => x.vignette = v),
+      row('سيبيا', a.sepia, 0, 1, (x, v) => x.sepia = v, show: pct),
+      row('إزالة اللون', a.gray, 0, 1, (x, v) => x.gray = v, show: pct),
+      row('تلوين', a.hue, -180, 180, (x, v) => x.hue = v),
+      row('تشويش', a.noise, 0, 1, (x, v) => x.noise = v, show: pct),
+      row('عكس', a.invert, 0, 1, (x, v) => x.invert = v, show: pct),
+      row('لمعان', a.brightness, -1, 1, (x, v) => x.brightness = v, show: lvl),
+      row('تباين', a.contrast, -1, 1, (x, v) => x.contrast = v, show: lvl),
+      row('تشبع', a.saturation, -1, 1, (x, v) => x.saturation = v, show: lvl),
     ],
   );
 }
@@ -429,14 +440,6 @@ class _Brush extends StatelessWidget {
           ColorStrip(ec: ec, current: ec.brushColor, onPick: (v) => ec.update(() => ec.brushColor = v)),
           StepSlider(label: 'السمك', value: ec.brushWidth, min: 2, max: 160, onChanged: (v) => ec.update(() => ec.brushWidth = v)),
           StepSlider(label: 'الشفافية', value: ec.brushOpacity, min: 0.05, max: 1, digits: 2, onChanged: (v) => ec.update(() => ec.brushOpacity = v)),
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              ChoiceChip(label: const Text('ممحاة'), selected: ec.brushErase, onSelected: (_) => ec.update(() => ec.brushErase = !ec.brushErase)),
-              const SizedBox(width: 8),
-              ChoiceChip(label: const Text('متقطع'), selected: ec.brushDashed, onSelected: (_) => ec.update(() => ec.brushDashed = !ec.brushDashed)),
-            ]),
-          ),
         ]),
       ),
     );
@@ -506,23 +509,50 @@ class _Grad extends StatelessWidget {
   const _Grad({required this.c, required this.l});
   final ToolCtx c;
   final Layer l;
+
+  Future<void> _options(BuildContext context) async {
+    final a = await showColorPicker(context, Color(l.grad1));
+    if (a == null) return;
+    c.mut((x) {
+      if (!x.gradOn) x.fillKind = 1;
+      x.grad1 = a.toARGB32();
+    });
+    if (!context.mounted) return;
+    final b = await showColorPicker(context, Color(l.grad2));
+    if (b == null) return;
+    c.mut((x) => x.grad2 = b.toARGB32());
+  }
+
   @override
   Widget build(BuildContext context) {
     final radial = l.fillKind == 2;
-    Widget box(Widget child, VoidCallback f) => InkWell(onTap: f, child: Container(height: 42, color: const Color(0xFF303030), padding: const EdgeInsets.symmetric(horizontal: 10), child: Center(child: child)));
+    Widget box(Widget child, VoidCallback f) => InkWell(onTap: f, child: Container(height: 46, color: const Color(0xFF303030), padding: const EdgeInsets.symmetric(horizontal: 12), child: Center(child: child)));
+    Widget step(IconData i, double d) => InkWell(
+          onTap: () => c.mut((x) {
+            if (!x.gradOn) x.fillKind = 1;
+            x.gradAngle = (x.gradAngle + d) % 360;
+          }),
+          child: Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(border: Border.all(color: kYellow, width: 1.4)),
+            child: Icon(i, size: 16, color: kYellow),
+          ),
+        );
     return Column(children: [
       Directionality(
         textDirection: TextDirection.ltr,
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          box(Row(children: [const Icon(Icons.remove, color: kYellow, size: 18), Text(' ${l.gradAngle.round()} ', style: const TextStyle(fontSize: 12)), const Icon(Icons.add, color: kYellow, size: 18)]), () {}),
+          box(Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.settings_outlined, color: kYellow, size: 20), const Text('خيارات', style: TextStyle(fontSize: 10))]), () => _options(context)),
           const SizedBox(width: 6),
-          box(Text(radial ? 'دائري' : 'خطي', style: const TextStyle(color: kYellow, fontSize: 13)), () => c.mut((x) => x.fillKind = radial ? 1 : 2)),
+          box(Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Text('الزاوية', style: TextStyle(fontSize: 10)),
+            Row(mainAxisSize: MainAxisSize.min, children: [step(Icons.remove, -15), SizedBox(width: 34, child: Center(child: Text('${l.gradAngle.round()}', style: const TextStyle(fontSize: 12)))), step(Icons.add, 15)]),
+          ]), () {}),
+          const SizedBox(width: 6),
+          box(Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(radial ? Icons.radio_button_unchecked : Icons.horizontal_rule, color: kYellow, size: 20), Text(radial ? 'دائري' : 'خطي', style: const TextStyle(fontSize: 10))]), () => c.mut((x) => x.fillKind = radial ? 1 : 2)),
         ]),
       ),
-      StepSlider(label: 'الزاوية', value: l.gradAngle, min: 0, max: 360, onChanged: (v) => c.mut((x) {
-            if (!x.gradOn) x.fillKind = 1;
-            x.gradAngle = v;
-          })),
       SizedBox(
         height: 44,
         child: Directionality(

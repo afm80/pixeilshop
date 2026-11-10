@@ -6,8 +6,8 @@ import '../../../core/services/user_fonts.g.dart';
 
 /// شاشة اختيار الخط: ✕ / عنوان / ✓ ، ثلاثة تبويبات (خطوطي · عربي · إنجليزي) وقائمة مرقّمة واحدة لكل تبويب.
 /// يُعلَّم الخط المختار بخلفية صفراء. تعيد اسم الخط عند ✓ أو null.
-Future<String?> showFontPicker(BuildContext context, String current) {
-  return Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => _FontPicker(current: current)));
+Future<String?> showFontPicker(BuildContext context, String current, {String sample = ''}) {
+  return Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => _FontPicker(current: current, sample: sample)));
 }
 
 const _yellow = Color(0xFFFFC400);
@@ -18,8 +18,8 @@ List<String> _uniq(Iterable<String> a) {
 }
 
 class _FontPicker extends StatefulWidget {
-  const _FontPicker({required this.current});
-  final String current;
+  const _FontPicker({required this.current, required this.sample});
+  final String current, sample;
 
   @override
   State<_FontPicker> createState() => _FontPickerState();
@@ -63,7 +63,7 @@ class _FontPickerState extends State<_FontPicker> {
               child: Row(
                 children: [
                   SizedBox(width: 44, child: Center(child: Text('${i + 1}', style: TextStyle(color: sel ? Colors.black : Colors.white, fontSize: 15)))),
-                  Expanded(child: Center(child: Text(sample, style: FontService.style(f, size: 28, color: sel ? Colors.black : Colors.white)))),
+                  Expanded(child: Center(child: Text(sample, maxLines: 1, overflow: TextOverflow.ellipsis, style: FontService.style(f, size: 26, color: sel ? Colors.black : Colors.white)))),
                   const SizedBox(width: 44),
                 ],
               ),
@@ -79,6 +79,7 @@ class _FontPickerState extends State<_FontPicker> {
   @override
   Widget build(BuildContext context) {
     // خطوط المستخدم المدمجة أولاً (مرتّبة من السكربت) ثم المرفوعة من الجهاز ثم خطوط التطبيق
+    final txt = widget.sample.trim().replaceAll('\n', ' ');
     final ar = _uniq([...kUserArabic, ...FontService.arabic]);
     final en = _uniq([...kUserLatin, ...FontService.latin]);
     return DefaultTabController(
@@ -97,7 +98,7 @@ class _FontPickerState extends State<_FontPicker> {
                   child: Row(
                     children: [
                       IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: _yellow, size: 32)),
-                      const Expanded(child: Center(child: Text('الخطوط', style: TextStyle(color: _yellow, fontSize: 17)))),
+                      const Expanded(child: Center(child: Text('Fonts', style: TextStyle(color: _yellow, fontSize: 17)))),
                       IconButton(onPressed: () => Navigator.pop(context, _sel), icon: const Icon(Icons.check, color: _yellow, size: 32)),
                     ],
                   ),
@@ -114,21 +115,28 @@ class _FontPickerState extends State<_FontPicker> {
               ),
               Expanded(
                 child: TabBarView(children: [
-                  _list(
-                    FontService.custom,
-                    'مرحبا  Abc',
-                    header: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: _yellow, foregroundColor: Colors.black),
-                        onPressed: _upload,
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('إضافة خط من جهازك (ttf / otf)'),
-                      ),
-                    ),
-                  ),
-                  _list(ar, 'مرحبا'),
-                  _list(en, 'How are you'),
+                  FontService.custom.isEmpty
+                      ? Center(
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            const Text('لا توجد خطوط مضافة'),
+                            const SizedBox(height: 14),
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(foregroundColor: _yellow, side: BorderSide.none, backgroundColor: const Color(0xFF2B2B2B)),
+                              onPressed: _upload,
+                              child: const Text('استعراض'),
+                            ),
+                          ]),
+                        )
+                      : _list(
+                          FontService.custom,
+                          txt.isEmpty ? 'مرحبا' : txt,
+                          header: Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(onPressed: _upload, child: const Text('استعراض', style: TextStyle(color: _yellow))),
+                          ),
+                        ),
+                  _list(ar, txt.isEmpty ? 'مرحبا' : txt),
+                  _list(en, txt.isEmpty ? 'How are you' : txt),
                 ]),
               ),
             ],
