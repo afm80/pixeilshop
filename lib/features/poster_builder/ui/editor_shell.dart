@@ -330,6 +330,11 @@ class _EditorShellState extends State<EditorShell> {
         _mut((x) => x.bold = !x.bold);
       case 'italic':
         _mut((x) => x.italic = !x.italic);
+      case 'add':
+        setState(() {
+          _addMenu = !_addMenu;
+          _colorMenu = false;
+        });
       case 'color':
         setState(() => _colorMenu = !_colorMenu);
       case 'crop':
