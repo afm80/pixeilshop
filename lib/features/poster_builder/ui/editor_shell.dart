@@ -458,7 +458,7 @@ class _EditorShellState extends State<EditorShell> {
         child: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(color: const Color(0xFF333333), borderRadius: BorderRadius.circular(10), boxShadow: const [BoxShadow(blurRadius: 8, color: Colors.black54)]),
-          child: Directionality(textDirection: TextDirection.ltr, child: Row(mainAxisSize: MainAxisSize.min, children: children)),
+          child: Directionality(textDirection: TextDirection.ltr, child: SizedBox(height: 64, child: Row(mainAxisSize: MainAxisSize.min, children: children))),
         ),
       );
 

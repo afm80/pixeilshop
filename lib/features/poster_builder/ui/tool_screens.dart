@@ -301,6 +301,9 @@ Widget? buildToolBody(String t, ToolCtx c) {
         ColorStrip(ec: c.ec, current: l.color, onPick: (v) => c.mut((x) {
               x.color = v;
               x.fillKind = 0;
+            }), onClear: () => c.mut((x) {
+              x.color = 0x00000000;
+              x.fillKind = 0;
             })),
       ]);
     case 'bgcolor':
@@ -308,7 +311,7 @@ Widget? buildToolBody(String t, ToolCtx c) {
         ColorStrip(ec: c.ec, current: c.doc.bgColor1, onPick: (v) => c.mutDoc((d) {
               d.bgKind = 0;
               d.bgColor1 = v;
-            })),
+            }), onClear: () => c.mutDoc((d) => d.bgKind = 3)),
       ]);
     case 'blend':
       if (l == null) return null;
