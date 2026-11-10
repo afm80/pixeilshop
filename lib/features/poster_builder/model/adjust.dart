@@ -13,6 +13,7 @@ class Adjust {
     this.gray = 0,
     this.invert = 0,
     this.noise = 0,
+    this.smooth = 0,
     this.preset = 0,
     this.presetAmount = 1,
   });
@@ -29,6 +30,7 @@ class Adjust {
   double gray; // 0..1 إزالة اللون
   double invert; // 0..1 عكس
   double noise; // 0..1 تشويش
+  double smooth; // 0..1 تنعيم البشرة (تجميل)
   int preset; // 0 = بدون
   double presetAmount; // 0..1
 
@@ -47,6 +49,7 @@ class Adjust {
       preset != 0;
 
   bool get hasNoise => noise > 0;
+  bool get hasSmooth => smooth > 0;
 
   void reset() {
     brightness = 0;
@@ -61,6 +64,7 @@ class Adjust {
     gray = 0;
     invert = 0;
     noise = 0;
+    smooth = 0;
     preset = 0;
     presetAmount = 1;
   }
@@ -80,6 +84,7 @@ class Adjust {
         'gr': gray,
         'iv': invert,
         'no': noise,
+        'sm': smooth,
         'p': preset,
         'pa': presetAmount,
       };
@@ -100,6 +105,7 @@ class Adjust {
       gray: d('gr'),
       invert: d('iv'),
       noise: d('no'),
+      smooth: d('sm'),
       preset: (m['p'] as num?)?.toInt() ?? 0,
       presetAmount: d('pa', 1),
     );
