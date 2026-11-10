@@ -76,7 +76,7 @@ class FontService {
 
   /// خطوط المستخدم المدمجة في التطبيق (assets/user_fonts) — أوفلاين دائماً.
   static final Set<String> bundledUser = {
-    for (final l in kUserArabic.values) ...l,
+    ...kUserArabic,
     ...kUserLatin,
   };
 
