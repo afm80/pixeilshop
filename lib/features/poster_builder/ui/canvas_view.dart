@@ -151,6 +151,7 @@ class CanvasView extends StatefulWidget {
 class _CanvasViewState extends State<CanvasView> {
   _Mode _mode = _Mode.none;
   String? _target;
+  String? _clipId; // آخر عنصر نُسخ (للصق)
   bool _moved = false, _hadSelBefore = false;
   int _pc = 1;
   Offset _startFocal = Offset.zero, _startFocalLocal = Offset.zero, _startFocalGlobal = Offset.zero;
@@ -552,13 +553,13 @@ class _CanvasViewState extends State<CanvasView> {
     );
   }
 
-  Widget _miniBtn(IconData icon, VoidCallback onTap, {bool yellow = false, bool white = false}) => InkWell(
+  Widget _miniBtn(IconData icon, VoidCallback? onTap, {bool yellow = false, bool white = false}) => InkWell(
         onTap: onTap,
         child: Container(
           width: 50,
           height: 46,
           color: yellow ? AppColors.accent2 : Colors.transparent,
-          child: Icon(icon, size: 30, color: yellow ? Colors.black : AppColors.accent2),
+          child: Icon(icon, size: 30, color: yellow ? Colors.black : (onTap == null ? Colors.white30 : AppColors.accent2)),
         ),
       );
 
@@ -695,7 +696,14 @@ class _CanvasViewState extends State<CanvasView> {
                                 _miniBtn(Icons.format_bold, () => _bloc.add(LayerMutated((x) => x.bold = !x.bold, id: sel.id, commit: true)), white: true),
                                 _miniBtn(Icons.format_italic, () => _bloc.add(LayerMutated((x) => x.italic = !x.italic, id: sel.id, commit: true)), white: true),
                               ],
-                              _miniBtn(Icons.copy, () => _bloc.add(const LayerDuplicated()), white: true),
+                              _miniBtn(Icons.copy, () {
+                                setState(() => _clipId = sel.id);
+                                _bloc.add(const LayerDuplicated());
+                              }, white: true),
+                              _miniBtn(
+                                Icons.content_paste,
+                                (_clipId != null && st.doc.layers.any((x) => x.id == _clipId)) ? () => _bloc.add(LayerDuplicated(_clipId!)) : null,
+                              ),
                               if (sel.name == 'خلفية') _miniBtn(Icons.delete_outline, () => _bloc.add(const LayerRemoved()), white: true),
                               if (sel.type != LayerType.text)
                                 _miniBtn(Icons.fullscreen, () {

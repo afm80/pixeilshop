@@ -347,14 +347,13 @@ class _EditorShellState extends State<EditorShell> {
   List<_Btn> _buttons(Layer? l) {
     if (l == null) {
       return const [
-        (icon: Icons.add_circle_outline, label: 'إضافة', tool: 'add'),
+        (icon: Icons.aspect_ratio, label: 'الحجم', tool: 'bg'),
         (icon: Icons.palette_outlined, label: 'اللون', tool: 'bgcolor'),
         (icon: Icons.border_style, label: 'إطار', tool: 'p:border'),
         (icon: Icons.rounded_corner, label: 'الزوايا', tool: 'p:corners'),
         (icon: Icons.opacity, label: 'الشفافية', tool: 'opacity'),
         (icon: Icons.tune, label: 'فلاتر', tool: 'dfilters'),
         (icon: Icons.flip, label: 'قلب', tool: 'flip'),
-        (icon: Icons.aspect_ratio, label: 'الحجم', tool: 'bg'),
       ];
     }
     const common = <_Btn>[
@@ -397,7 +396,11 @@ class _EditorShellState extends State<EditorShell> {
           ...common,
         ];
       case LayerType.shape:
-        return [(icon: Icons.palette_outlined, label: 'اللون', tool: 'color'), ...common];
+        return [
+          (icon: Icons.palette_outlined, label: 'اللون', tool: 'color'),
+          for (final b in common)
+            if (b.tool != 'p:corners' || l.shape == ShapeKind.rect) b,
+        ];
     }
   }
 
@@ -458,6 +461,7 @@ class _EditorShellState extends State<EditorShell> {
                 ),
                 child: _item(Icons.arrow_back, 'رجوع', () => bloc.add(const LayerSelected(null))),
               ),
+            if (l == null) ..._addItems(),
             for (final b in items) _item(b.icon, b.label, () => _tap(b, l)),
           ],
         ),
