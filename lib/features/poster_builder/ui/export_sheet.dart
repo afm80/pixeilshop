@@ -29,6 +29,7 @@ class _ExportSheetState extends State<_ExportSheet> {
   ExportFormat _fmt = ExportFormat.png;
   double _scale = 1;
   double _quality = 92;
+  bool _transparent = false;
   bool _busy = false;
 
   String get _sizeText {
@@ -41,12 +42,18 @@ class _ExportSheetState extends State<_ExportSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     try {
-      final img = await ExportService.render(widget.doc, widget.images, scale: _scale);
-      final bytes = await ExportService.encode(img, _fmt, quality: _quality.round());
+      var doc = widget.doc;
+      var fmt = _fmt;
+      if (_transparent) {
+        doc = Doc.fromJson(Map<String, dynamic>.from(widget.doc.toJson()))..bgKind = 3;
+        if (fmt == ExportFormat.jpg) fmt = ExportFormat.png;
+      }
+      final img = await ExportService.render(doc, widget.images, scale: _scale);
+      final bytes = await ExportService.encode(img, fmt, quality: _quality.round());
       if (share) {
-        await ExportService.share(bytes, _fmt);
+        await ExportService.share(bytes, fmt);
       } else {
-        await ExportService.saveToGallery(bytes, _fmt);
+        await ExportService.saveToGallery(bytes, fmt);
         messenger.showSnackBar(const SnackBar(content: Text('تم الحفظ في المعرض')));
       }
       nav.pop();
@@ -67,7 +74,22 @@ class _ExportSheetState extends State<_ExportSheet> {
           const Text('تصدير التصميم', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           const SectionLabel('الصيغة'),
           Row(children: [
-            for (final f in ExportFormat.values) ChipChoice(label: f.label, selected: _fmt == f, onTap: () => setState(() => _fmt = f)),
+            for (final f in ExportFormat.values) ChipChoice(label: f.label, selected: _fmt == f, onTap: () => setState(() {
+                  _fmt = f;
+                  if (f == ExportFormat.jpg) _transparent = false;
+                })),
+          ]),
+          const SectionLabel('الخلفية'),
+          Row(children: [
+            ChipChoice(label: 'بخلفية', selected: !_transparent, onTap: () => setState(() => _transparent = false)),
+            ChipChoice(
+              label: 'شفافة (مفرغة)',
+              selected: _transparent,
+              onTap: () => setState(() {
+                _transparent = true;
+                if (_fmt == ExportFormat.jpg) _fmt = ExportFormat.png;
+              }),
+            ),
           ]),
           const SectionLabel('الدقة'),
           Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [

@@ -696,6 +696,7 @@ class _CanvasViewState extends State<CanvasView> {
                                 _miniBtn(Icons.format_italic, () => _bloc.add(LayerMutated((x) => x.italic = !x.italic, id: sel.id, commit: true)), white: true),
                               ],
                               _miniBtn(Icons.copy, () => _bloc.add(const LayerDuplicated()), white: true),
+                              if (sel.name == 'خلفية') _miniBtn(Icons.delete_outline, () => _bloc.add(const LayerRemoved()), white: true),
                               if (sel.type != LayerType.text)
                                 _miniBtn(Icons.fullscreen, () {
                                   final z = TextMetrics.size(sel);

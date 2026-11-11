@@ -121,6 +121,28 @@ class _EditorPageState extends State<EditorPage> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _confirmExit() async {
+    final r = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.panel,
+        title: const Text('هل تود الخروج؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('إلغاء')),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'exit'), child: const Text('خروج')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'save'), child: const Text('خروج وحفظ')),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (r == 'save') {
+      await _persistAndLeave();
+    } else if (r == 'exit') {
+      _saveTimer?.cancel();
+      Navigator.of(context).pop();
+    }
+  }
+
   void _editSelectedText(BuildContext ctx) {
     final l = canvas.state.selected;
     if (l != null && l.type == LayerType.text) showTextEditor(ctx, l);
@@ -176,7 +198,7 @@ class _EditorPageState extends State<EditorPage> {
         child: PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) _persistAndLeave();
+            if (!didPop) _confirmExit();
           },
           child: Builder(builder: (ctx) {
             _innerContext = ctx;
