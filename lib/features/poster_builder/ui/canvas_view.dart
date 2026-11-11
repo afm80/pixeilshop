@@ -151,7 +151,6 @@ class CanvasView extends StatefulWidget {
 class _CanvasViewState extends State<CanvasView> {
   _Mode _mode = _Mode.none;
   String? _target;
-  String? _clipId; // آخر عنصر نُسخ (للصق)
   bool _moved = false, _hadSelBefore = false;
   int _pc = 1;
   Offset _startFocal = Offset.zero, _startFocalLocal = Offset.zero, _startFocalGlobal = Offset.zero;
@@ -696,13 +695,12 @@ class _CanvasViewState extends State<CanvasView> {
                                 _miniBtn(Icons.format_bold, () => _bloc.add(LayerMutated((x) => x.bold = !x.bold, id: sel.id, commit: true)), white: true),
                                 _miniBtn(Icons.format_italic, () => _bloc.add(LayerMutated((x) => x.italic = !x.italic, id: sel.id, commit: true)), white: true),
                               ],
-                              _miniBtn(Icons.copy, () {
-                                setState(() => _clipId = sel.id);
-                                _bloc.add(const LayerDuplicated());
-                              }, white: true),
+                              _miniBtn(Icons.copy, () => _bloc.add(const LayerDuplicated()), white: true),
                               _miniBtn(
-                                Icons.content_paste,
-                                (_clipId != null && st.doc.layers.any((x) => x.id == _clipId)) ? () => _bloc.add(LayerDuplicated(_clipId!)) : null,
+                                Icons.flip_to_front,
+                                st.doc.layers.isNotEmpty && st.doc.layers.last.id != sel.id
+                                    ? () => _bloc.add(LayerReordered(st.doc.layers.indexWhere((x) => x.id == sel.id), st.doc.layers.length - 1))
+                                    : null,
                               ),
                               if (sel.name == 'خلفية') _miniBtn(Icons.delete_outline, () => _bloc.add(const LayerRemoved()), white: true),
                               if (sel.type != LayerType.text)
