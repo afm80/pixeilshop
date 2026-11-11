@@ -56,11 +56,11 @@ class NewDesignPage extends StatefulWidget {
 }
 
 class _NewDesignPageState extends State<NewDesignPage> {
-  final _w = TextEditingController(text: '576');
+  final _w = TextEditingController(text: '1024');
   final _h = TextEditingController(text: '1024');
   final _pal = _buildPalette();
   int _color = 0xFFFFFFFF;
-  int _ratio = 0;
+  int _ratio = 4;
 
   @override
   void dispose() {
