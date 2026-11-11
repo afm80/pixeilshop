@@ -347,13 +347,14 @@ class _EditorShellState extends State<EditorShell> {
   List<_Btn> _buttons(Layer? l) {
     if (l == null) {
       return const [
-        (icon: Icons.aspect_ratio, label: 'الحجم', tool: 'bg'),
+        (icon: Icons.add_circle_outline, label: 'إضافة', tool: 'add'),
         (icon: Icons.palette_outlined, label: 'اللون', tool: 'bgcolor'),
         (icon: Icons.border_style, label: 'إطار', tool: 'p:border'),
         (icon: Icons.rounded_corner, label: 'الزوايا', tool: 'p:corners'),
         (icon: Icons.opacity, label: 'الشفافية', tool: 'opacity'),
         (icon: Icons.tune, label: 'فلاتر', tool: 'dfilters'),
         (icon: Icons.flip, label: 'قلب', tool: 'flip'),
+        (icon: Icons.aspect_ratio, label: 'الحجم', tool: 'bg'),
       ];
     }
     const common = <_Btn>[
@@ -396,11 +397,7 @@ class _EditorShellState extends State<EditorShell> {
           ...common,
         ];
       case LayerType.shape:
-        return [
-          (icon: Icons.palette_outlined, label: 'اللون', tool: 'color'),
-          for (final b in common)
-            if (b.tool != 'p:corners' || l.shape == ShapeKind.rect) b,
-        ];
+        return [(icon: Icons.palette_outlined, label: 'اللون', tool: 'color'), ...common];
     }
   }
 
@@ -461,7 +458,6 @@ class _EditorShellState extends State<EditorShell> {
                 ),
                 child: _item(Icons.arrow_back, 'رجوع', () => bloc.add(const LayerSelected(null))),
               ),
-            if (l == null) ..._addItems(),
             for (final b in items) _item(b.icon, b.label, () => _tap(b, l)),
           ],
         ),
@@ -756,6 +752,8 @@ class _EditorShellState extends State<EditorShell> {
             Positioned.fill(child: CanvasView(images: widget.images, controller: ec, onEditText: widget.onEditText)),
             if (layersMode) Positioned.fill(child: ColoredBox(color: Colors.black54)),
             if (layersMode && _layersShown) _layersOverlay(st),
+            if (_addMenu && !inTool)
+              Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => setState(() => _addMenu = false), child: const ColoredBox(color: Color(0x14000000)))),
             if (_colorMenu && !inTool && l != null)
               _floating(al: Alignment.bottomLeft, margin: const EdgeInsets.only(left: 130, bottom: 8), [
                 for (final p in const [('لون واحد', 'p:color', Icons.format_color_fill), ('تدرج', 'grad', Icons.gradient), ('نمط', 'pattern', Icons.texture), ('تلبيس', 'fill', Icons.image_outlined)])
