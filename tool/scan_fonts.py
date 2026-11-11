@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """يمسح assets/user_fonts ويسجّل الخطوط في pubspec.yaml ويولّد lib/core/services/user_fonts.g.dart.
 
-- كل مجلد فرعي = تصنيف. ملفات الجذر = «أخرى».
+- لا تصنيفات: قائمة عربية وقائمة إنجليزية مرتّبتان أبجدياً (المجلدات الفرعية مسموحة للتنظيم فقط).
 - الخط الذي ليس فيه حرف عربي (ا) يُصنَّف إنجليزياً.
 - اسم الخط يُقرأ من داخل الملف (fontTools)، ويُستعمل اسم الملف إن تعذر.
 لا يفشل البناء إن لم توجد خطوط.
@@ -64,23 +64,6 @@ def dstr(s):
     return "'" + s.replace('\\', '\\\\').replace("'", "\\'").replace('$', '\\$') + "'"
 
 
-RULES = [
-    ('ديواني وكوفي', ('kufi', 'kufic', 'diwani', 'deewani', 'كوفي', 'ديواني')),
-    ('رقعة وفارسي', ('ruqa', 'riqa', 'nastaliq', 'nastaleeq', 'farsi', 'persian', 'رقعة', 'نستعليق', 'فارسي')),
-    ('نسخ وثلث', ('naskh', 'nasakh', 'naskhi', 'thuluth', 'thulth', 'scheherazade', 'amiri', 'نسخ', 'ثلث')),
-    ('إعلانية', ('bold', 'black', 'heavy', 'display', 'extrabold', 'عريض', 'ثقيل')),
-]
-CHUNK = 40
-
-
-def guess(name, filename, weight):
-    t = (name + ' ' + filename).lower()
-    for cat, words in RULES:
-        if any(w in t for w in words):
-            return cat
-    return 'إعلانية' if weight >= 700 else 'أخرى'
-
-
 def info(path):
     name, arabic, weight = path.stem, True, 400
     if TTFont is not None:
@@ -104,7 +87,7 @@ def info(path):
 
 
 files = sorted(p for p in FONTS.rglob('*') if p.suffix.lower() in ('.ttf', '.otf')) if FONTS.exists() else []
-ar, la, seen, entries = {}, [], set(), []
+ar, la, seen, entries = [], [], set(), []
 hashes, names, skipped = {}, {}, []
 for p in files:
     rel = p.relative_to(ROOT).as_posix()
@@ -128,24 +111,16 @@ for p in files:
         skipped.append((p.name, 'نفس اسم الخط (%s) موجود في %s' % (name, names[name])))
         continue
     names[name] = p.name
-    cat = parts[0] if len(parts) > 1 else guess(name, p.name, weight)
     seen.add(name)
     entries.append((name, minimize(p, rel)))
-    if cat.lower() in LATIN_DIRS or not is_ar:
+    if parts[0].lower() in LATIN_DIRS or not is_ar:
         la.append(name)
     else:
-        ar.setdefault(cat, []).append(name)
+        ar.append(name)
 
-# تقسيم التصنيف الكبير إلى صفحات صغيرة (40 خطاً) كي تبقى القوائم سريعة
-for c in list(ar):
-    ns = ar[c]
-    if len(ns) > CHUNK:
-        del ar[c]
-        for i in range(0, len(ns), CHUNK):
-            ar[c if i == 0 else '%s %d' % (c, i // CHUNK + 1)] = ns[i:i + CHUNK]
-
-for c, ns in ar.items():
-    print('[%s] %d خطاً: %s' % (c, len(ns), '، '.join(ns[:6]) + (' ...' if len(ns) > 6 else '')))
+ar.sort(key=str.lower)
+la.sort(key=str.lower)
+print('عربي: %d | إنجليزي: %d' % (len(ar), len(la)))
 
 # pubspec
 text = PUB.read_text(encoding='utf-8')
@@ -159,10 +134,14 @@ if entries:
 PUB.write_text(text, encoding='utf-8')
 
 # dart
-lines = ['// ملف مولَّد تلقائياً بواسطة tool/scan_fonts.py — لا تعدّله يدوياً.', '', 'const Map<String, List<String>> kUserArabic = {']
-for c, ns in ar.items():
-    lines.append('  %s: [%s],' % (dstr(c), ', '.join(dstr(n) for n in ns)))
-lines += ['};', '', 'const List<String> kUserLatin = [%s];' % ', '.join(dstr(n) for n in la), '']
+lines = [
+    '// ملف مولَّد تلقائياً بواسطة tool/scan_fonts.py — لا تعدّله يدوياً.',
+    '',
+    'const List<String> kUserArabic = [%s];' % ', '.join(dstr(n) for n in ar),
+    '',
+    'const List<String> kUserLatin = [%s];' % ', '.join(dstr(n) for n in la),
+    '',
+]
 GEN.write_text('\n'.join(lines), encoding='utf-8')
 if skipped:
     print('--- تم تجاهل %d ملفاً ---' % len(skipped))
@@ -174,4 +153,4 @@ try:
     print('الحجم قبل التقليم: %.1f MB ← بعده: %.1f MB' % (before / 1e6, after / 1e6))
 except Exception:  # noqa: BLE001
     pass
-print('خطوط مسجّلة:', len(entries), '| عربي:', sum(len(v) for v in ar.values()), '| إنجليزي:', len(la))
+print('خطوط مسجّلة:', len(entries), '| عربي:', len(ar), '| إنجليزي:', len(la))
