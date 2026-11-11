@@ -32,8 +32,8 @@ jobs:
       - name: Test
         run: flutter test
         continue-on-error: true
-      - name: Build universal APK (arm64 + arm32 + x86_64)
-        run: flutter build apk --release
+      - name: Build APK (arm64 only, smallest)
+        run: flutter build apk --release --target-platform android-arm64 --split-debug-info=build/symbols
       - name: Rename APK
         run: cp build/app/outputs/flutter-apk/app-release.apk pixeilshop.apk
       - uses: actions/upload-artifact@v4
