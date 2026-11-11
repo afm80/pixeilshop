@@ -23,6 +23,7 @@ import 'canvas_view.dart';
 import 'editor_panel.dart';
 import 'editor_shell.dart';
 import 'export_sheet.dart';
+import '../../home/new_design_page.dart';
 
 /// startTool: '' | 'rmbg' | 'anime' | 'grade'
 class EditorPage extends StatefulWidget {
@@ -211,6 +212,27 @@ class _EditorPageState extends State<EditorPage> {
                   controller: controller,
                   images: images,
                   onLeave: _persistAndLeave,
+                  onNew: () async {
+                    _saveTimer?.cancel();
+                    try {
+                      await StorageService.save(canvas.state.doc);
+                      await ExportService.thumbnail(canvas.state.doc, images, canvas.state.doc.id);
+                    } catch (_) {}
+                    if (!mounted) return;
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const NewDesignPage(colored: false)));
+                  },
+                  onSaveDesign: () async {
+                    _saveTimer?.cancel();
+                    try {
+                      await StorageService.save(canvas.state.doc);
+                      await ExportService.thumbnail(canvas.state.doc, images, canvas.state.doc.id);
+                      _toast('تم حفظ التصميم');
+                    } catch (_) {
+                      _toast('تعذر حفظ التصميم');
+                    }
+                  },
+                  onShare: () => showExportSheet(ctx, canvas.state.doc, images, share: true),
+                  onExit: _confirmExit,
                   onExport: () => showExportSheet(ctx, canvas.state.doc, images),
                   onEditText: () => _editSelectedText(ctx),
                 ),

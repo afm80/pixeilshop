@@ -555,10 +555,10 @@ class _CanvasViewState extends State<CanvasView> {
   Widget _miniBtn(IconData icon, VoidCallback onTap, {bool yellow = false, bool white = false}) => InkWell(
         onTap: onTap,
         child: Container(
-          width: 44,
-          height: 40,
+          width: 50,
+          height: 46,
           color: yellow ? AppColors.accent2 : Colors.transparent,
-          child: Icon(icon, size: 22, color: yellow ? Colors.black : (white ? Colors.white : AppColors.accent2)),
+          child: Icon(icon, size: 30, color: yellow ? Colors.black : AppColors.accent2),
         ),
       );
 
@@ -676,13 +676,13 @@ class _CanvasViewState extends State<CanvasView> {
                                 InkWell(
                                   onTap: () => ec.openTool?.call('fsize'),
                                   child: SizedBox(
-                                    width: 44,
-                                    height: 40,
+                                    width: 50,
+                                    height: 46,
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Text('${sel.fontSize.round()}', style: const TextStyle(fontSize: 10.5, color: Colors.white)),
-                                        const Icon(Icons.text_fields, size: 18, color: Colors.white),
+                                        Text('${sel.fontSize.round()}', style: const TextStyle(fontSize: 12, color: AppColors.accent2)),
+                                        const Icon(Icons.text_fields, size: 24, color: AppColors.accent2),
                                       ],
                                     ),
                                   ),

@@ -4,119 +4,151 @@ import 'package:flutter/material.dart';
 
 import '../../../core/services/export_service.dart';
 import '../../../core/services/image_store.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/ui_helpers.dart';
 import '../model/doc.dart';
 
-Future<void> showExportSheet(BuildContext context, Doc doc, ImageStore images) {
-  return showModalBottomSheet<void>(
+const _yellow = Color(0xFFFFC400);
+
+/// نافذة «خيارات الحفظ» بأسلوب بوستر شوب: الامتداد (JPEG/PNG) + الأبعاد + موافق/إلغاء.
+/// [share] = true يشارك الصورة بدل حفظها في المعرض.
+Future<void> showExportSheet(BuildContext context, Doc doc, ImageStore images, {bool share = false}) {
+  return showDialog<void>(
     context: context,
-    isScrollControlled: true,
-    builder: (_) => _ExportSheet(doc: doc, images: images),
+    builder: (_) => _ExportDialog(doc: doc, images: images, share: share),
   );
 }
 
-class _ExportSheet extends StatefulWidget {
-  const _ExportSheet({required this.doc, required this.images});
+class _ExportDialog extends StatefulWidget {
+  const _ExportDialog({required this.doc, required this.images, required this.share});
   final Doc doc;
   final ImageStore images;
+  final bool share;
 
   @override
-  State<_ExportSheet> createState() => _ExportSheetState();
+  State<_ExportDialog> createState() => _ExportDialogState();
 }
 
-class _ExportSheetState extends State<_ExportSheet> {
+class _ExportDialogState extends State<_ExportDialog> {
   ExportFormat _fmt = ExportFormat.png;
-  double _scale = 1;
-  double _quality = 92;
-  bool _transparent = false;
+  late final List<int> _sizes;
+  int _sel = 0;
   bool _busy = false;
 
-  String get _sizeText {
-    final k = math.min(_scale, ExportService.maxSide / math.max(widget.doc.w, widget.doc.h));
-    return '${(widget.doc.w * k).round()} × ${(widget.doc.h * k).round()} px';
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.doc;
+    final cur = math.max(d.w, d.h).round();
+    final set = <int>[cur];
+    for (final s in const [720, 1280, 1536, 1920, 2048]) {
+      if (!set.contains(s)) set.add(s);
+    }
+    _sizes = set;
   }
 
-  Future<void> _run(bool share) async {
+  String _label(int longSide) {
+    final d = widget.doc;
+    final k = longSide / math.max(d.w, d.h);
+    return '${(d.w * k).round()} X ${(d.h * k).round()}';
+  }
+
+  Future<void> _ok() async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     try {
-      var doc = widget.doc;
-      var fmt = _fmt;
-      if (_transparent) {
-        doc = Doc.fromJson(Map<String, dynamic>.from(widget.doc.toJson()))..bgKind = 3;
-        if (fmt == ExportFormat.jpg) fmt = ExportFormat.png;
-      }
-      final img = await ExportService.render(doc, widget.images, scale: _scale);
-      final bytes = await ExportService.encode(img, fmt, quality: _quality.round());
-      if (share) {
-        await ExportService.share(bytes, fmt);
+      final d = widget.doc;
+      final scale = _sizes[_sel] / math.max(d.w, d.h);
+      final img = await ExportService.render(d, widget.images, scale: scale);
+      final bytes = await ExportService.encode(img, _fmt, quality: 95);
+      if (widget.share) {
+        await ExportService.share(bytes, _fmt);
       } else {
-        await ExportService.saveToGallery(bytes, fmt);
+        await ExportService.saveToGallery(bytes, _fmt);
         messenger.showSnackBar(const SnackBar(content: Text('تم الحفظ في المعرض')));
       }
       nav.pop();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('فشل التصدير: $e')));
+      messenger.showSnackBar(SnackBar(content: Text('فشل الحفظ: $e')));
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  Widget _head(String t) => Container(
+        width: double.infinity,
+        height: 56,
+        alignment: Alignment.center,
+        color: const Color(0xFF1F1F1F),
+        child: Text(t, style: const TextStyle(fontSize: 16, color: Colors.white)),
+      );
+
+  Widget _fmtBtn(ExportFormat f, String t) {
+    final sel = _fmt == f;
+    return InkWell(
+      onTap: () => setState(() => _fmt = f),
+      child: Container(
+        width: 104,
+        height: 96,
+        alignment: Alignment.center,
+        color: sel ? _yellow : Colors.transparent,
+        child: Text(t, style: TextStyle(fontSize: 18, color: sel ? Colors.black : Colors.white)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('تصدير التصميم', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SectionLabel('الصيغة'),
-          Row(children: [
-            for (final f in ExportFormat.values) ChipChoice(label: f.label, selected: _fmt == f, onTap: () => setState(() {
-                  _fmt = f;
-                  if (f == ExportFormat.jpg) _transparent = false;
-                })),
-          ]),
-          const SectionLabel('الخلفية'),
-          Row(children: [
-            ChipChoice(label: 'بخلفية', selected: !_transparent, onTap: () => setState(() => _transparent = false)),
-            ChipChoice(
-              label: 'شفافة (مفرغة)',
-              selected: _transparent,
-              onTap: () => setState(() {
-                _transparent = true;
-                if (_fmt == ExportFormat.jpg) _fmt = ExportFormat.png;
-              }),
-            ),
-          ]),
-          const SectionLabel('الدقة'),
-          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-            for (final s in [0.5, 1.0, 2.0, 3.0, 4.0])
-              ChipChoice(label: s == s.toInt() ? '${s.toInt()}x' : '${s}x', selected: _scale == s, onTap: () => setState(() => _scale = s)),
-            const SizedBox(width: 8),
-            Text(_sizeText, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-          ]),
-          if (_fmt != ExportFormat.png)
-            SliderRow(
-              label: 'الجودة',
-              value: _quality,
-              min: 50,
-              max: 100,
-              onChanged: (v) => setState(() => _quality = v),
-              display: (v) => v.round().toString(),
-            ),
-          const SizedBox(height: 14),
-          if (_busy)
-            const Center(child: CircularProgressIndicator())
-          else
-            Row(children: [
-              Expanded(child: FilledButton.icon(onPressed: () => _run(false), icon: const Icon(Icons.download), label: const Text('حفظ في المعرض'))),
-              const SizedBox(width: 10),
-              Expanded(child: OutlinedButton.icon(onPressed: () => _run(true), icon: const Icon(Icons.share), label: const Text('مشاركة'))),
-            ]),
-        ],
+    return Dialog(
+      backgroundColor: const Color(0xFF262626),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 20, 24, 14),
+                child: Text('خيارات الحفظ', style: TextStyle(fontSize: 20, color: _yellow)),
+              ),
+              _head('الامتداد'),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [_fmtBtn(ExportFormat.jpg, 'JPEG'), _fmtBtn(ExportFormat.png, 'PNG')])),
+              ),
+              _head('الابعاد'),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _sizes.length,
+                  itemBuilder: (_, i) => InkWell(
+                    onTap: () => setState(() => _sel = i),
+                    child: Container(
+                      height: 78,
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.white10))),
+                      child: Row(children: [
+                        Icon(_sel == i ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: _sel == i ? _yellow : Colors.white54, size: 36),
+                        Expanded(child: Center(child: Text(_label(_sizes[i]), style: const TextStyle(fontSize: 17, color: Colors.white)))),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: _busy
+                    ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 3, color: _yellow)))
+                    : Row(children: [
+                        TextButton(onPressed: _ok, child: const Text('موافق', style: TextStyle(fontSize: 17, color: _yellow))),
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('الغاء', style: TextStyle(fontSize: 17, color: _yellow))),
+                      ]),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

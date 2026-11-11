@@ -105,12 +105,16 @@ class EditorShell extends StatefulWidget {
     required this.controller,
     required this.images,
     required this.onLeave,
+    required this.onNew,
+    required this.onSaveDesign,
+    required this.onShare,
+    required this.onExit,
     required this.onExport,
     required this.onEditText,
   });
   final EditorController controller;
   final ImageStore images;
-  final VoidCallback onLeave, onExport, onEditText;
+  final VoidCallback onLeave, onExport, onEditText, onNew, onSaveDesign, onShare, onExit;
 
   @override
   State<EditorShell> createState() => _EditorShellState();
@@ -252,7 +256,7 @@ class _EditorShellState extends State<EditorShell> {
   Widget _topMain() {
     return BlocBuilder<CanvasBloc, CanvasState>(builder: (context, st) {
       Widget ic(IconData i, VoidCallback? f, {int badge = 0, Color c = kYellow}) => Stack(alignment: Alignment.center, children: [
-            IconButton(onPressed: f, icon: Icon(i, color: f == null ? Colors.white30 : c, size: 26)),
+            IconButton(onPressed: f, icon: Icon(i, color: f == null ? Colors.white30 : c, size: 34)),
             if (badge > 0)
               Positioned(
                 bottom: 4,
@@ -266,19 +270,40 @@ class _EditorShellState extends State<EditorShell> {
           textDirection: TextDirection.ltr,
           child: Row(children: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.download_for_offline_outlined, color: kYellow, size: 28),
-              color: const Color(0xFF333333),
+              icon: const Icon(Icons.download_for_offline_outlined, color: kYellow, size: 36),
+              color: const Color(0xFF222222),
+              offset: const Offset(0, 48),
               onSelected: (v) {
                 switch (v) {
-                  case 'leave':
-                    widget.onLeave();
-                  case 'export':
+                  case 'new':
+                    widget.onNew();
+                  case 'save':
+                    widget.onSaveDesign();
+                  case 'img':
                     widget.onExport();
+                  case 'share':
+                    widget.onShare();
+                  case 'exit':
+                    widget.onExit();
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'leave', child: Text('حفظ والخروج')),
-                PopupMenuItem(value: 'export', child: Text('تصدير')),
+              itemBuilder: (_) => [
+                for (final m in const [
+                  ('new', 'تصميم جديد', Icons.edit_square),
+                  ('save', 'حفظ التصميم', Icons.save_outlined),
+                  ('img', 'حفظ الصورة', Icons.image_outlined),
+                  ('share', 'مشاركة الصورة', Icons.share_outlined),
+                  ('exit', 'خروج', Icons.logout),
+                ])
+                  PopupMenuItem<String>(
+                    value: m.$1,
+                    height: 52,
+                    child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                      Text(m.$2, style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 12),
+                      Icon(m.$3, color: kYellow, size: 28),
+                    ]),
+                  ),
               ],
             ),
             ic(Icons.layers_outlined, () => _open('layers')),
@@ -307,12 +332,12 @@ class _EditorShellState extends State<EditorShell> {
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: Row(children: [
-          IconButton(onPressed: () => _close(cancel: true), icon: const Icon(Icons.close, color: _yellow, size: 32)),
+          IconButton(onPressed: () => _close(cancel: true), icon: const Icon(Icons.close, color: _yellow, size: 36)),
           Expanded(child: Center(child: Text(_titles[_tool] ?? '', style: const TextStyle(color: Colors.white, fontSize: 15)))),
           if (_tool == 'layers')
             IconButton(onPressed: () => setState(() => _layersShown = !_layersShown), icon: Icon(_layersShown ? Icons.visibility : Icons.visibility_off, color: _yellow, size: 28)),
           ...toolExtras(_stripTool(_tool!), _ctx(bloc.state.selected, bloc.state.doc)),
-          IconButton(onPressed: _close, icon: const Icon(Icons.check, color: _yellow, size: 32)),
+          IconButton(onPressed: _close, icon: const Icon(Icons.check, color: _yellow, size: 36)),
         ]),
       ),
     );
@@ -418,7 +443,7 @@ class _EditorShellState extends State<EditorShell> {
   Widget _bottomBar(Layer? l) {
     final items = _buttons(l);
     return Container(
-      height: 74,
+      height: 82,
       color: _bar,
       child: Directionality(
         textDirection: TextDirection.ltr,
@@ -445,18 +470,18 @@ class _EditorShellState extends State<EditorShell> {
         child: SizedBox(
           width: 72,
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(i, color: _yellow, size: 26),
+            Icon(i, color: _yellow, size: 34),
             const SizedBox(height: 4),
-            Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+            Text(t, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ]),
         ),
       );
 
   // ───────── القوائم العائمة ─────────
-  Widget _floating(List<Widget> children, {Alignment al = Alignment.topRight}) => Align(
+  Widget _floating(List<Widget> children, {Alignment al = Alignment.topRight, EdgeInsets margin = const EdgeInsets.all(8)}) => Align(
         alignment: al,
         child: Container(
-          margin: const EdgeInsets.all(8),
+          margin: margin,
           decoration: BoxDecoration(color: const Color(0xFF333333), borderRadius: BorderRadius.circular(10), boxShadow: const [BoxShadow(blurRadius: 8, color: Colors.black54)]),
           child: Directionality(textDirection: TextDirection.ltr, child: SizedBox(height: 64, child: Row(mainAxisSize: MainAxisSize.min, children: children))),
         ),
@@ -728,7 +753,7 @@ class _EditorShellState extends State<EditorShell> {
             if (layersMode) Positioned.fill(child: ColoredBox(color: Colors.black54)),
             if (layersMode && _layersShown) _layersOverlay(st),
             if (_colorMenu && !inTool && l != null)
-              _floating(al: Alignment.bottomLeft, [
+              _floating(al: Alignment.bottomLeft, margin: const EdgeInsets.only(left: 130, bottom: 8), [
                 for (final p in const [('لون واحد', 'p:color', Icons.format_color_fill), ('تدرج', 'grad', Icons.gradient), ('نمط', 'pattern', Icons.texture), ('تلبيس', 'fill', Icons.image_outlined)])
                   _item(p.$3, p.$1, () {
                     setState(() => _colorMenu = false);
