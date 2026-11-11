@@ -163,7 +163,6 @@ class _EditorPageState extends State<EditorPage> {
           BlocListener<CanvasBloc, CanvasState>(
             listener: (context, st) {
               images.ensureDoc(st.doc);
-              _scheduleSave();
               if (controller.eraserLayerId != null && st.selectedId != controller.eraserLayerId) {
                 controller.stopEraser();
               }
@@ -213,11 +212,6 @@ class _EditorPageState extends State<EditorPage> {
                   images: images,
                   onLeave: _persistAndLeave,
                   onNew: () async {
-                    _saveTimer?.cancel();
-                    try {
-                      await StorageService.save(canvas.state.doc);
-                      await ExportService.thumbnail(canvas.state.doc, images, canvas.state.doc.id);
-                    } catch (_) {}
                     if (!mounted) return;
                     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const NewDesignPage(colored: false)));
                   },
