@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/services/media_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -53,8 +54,16 @@ class _HomePageState extends State<HomePage> {
     const gap = 10.0;
     final tile = (cw - gap) / 2;
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Stack(
+      backgroundColor: const Color(0xFF0B0B0B),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF080808), Color(0xFF1A1A1A), Color(0xFF2C2C2C)],
+          ),
+        ),
+        child: Stack(
         children: [
           if (_menu) Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => setState(() => _menu = false))),
           Center(
@@ -75,7 +84,7 @@ class _HomePageState extends State<HomePage> {
                             height: tile,
                             child: Stack(
                               children: [
-                                _Tile(icon: Icons.palette_outlined, label: 'التصميم', onTap: () => setState(() => _menu = !_menu)),
+                                _Tile(icon: Icons.palette_outlined, label: 'تصميم جديد', onTap: () => setState(() => _menu = !_menu)),
                                 if (_menu)
                                   Positioned.fill(
                                     child: _DesignMenu(
@@ -103,7 +112,23 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InkWell(
+                  onTap: () => launchUrl(Uri.parse('https://afm80.github.io/net'), mode: LaunchMode.externalApplication),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    child: Text('Alfaham Net', style: TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: 0.5)),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
       ),
     );
   }
