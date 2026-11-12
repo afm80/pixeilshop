@@ -1,12 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../poster_builder/ui/editor_page.dart';
+import 'saved_ui.dart';
 
-/// التصاميم المحفوظة: شبكة مصغّرات. ضغطة تفتح، ضغطة مطوّلة تحذف.
+/// التصاميم المحفوظة: صف «حفظ تلقائي» ثم قائمة (مصغّرة، اسم، حذف، تفاصيل). الضغط يفتح التصميم.
 class SavedPage extends StatefulWidget {
   const SavedPage({super.key});
 
@@ -16,6 +15,8 @@ class SavedPage extends StatefulWidget {
 
 class _SavedPageState extends State<SavedPage> {
   List<ProjectMeta> _projects = [];
+  bool _newest = true;
+  bool _auto = StorageService.autosave;
 
   @override
   void initState() {
@@ -29,68 +30,46 @@ class _SavedPageState extends State<SavedPage> {
   }
 
   Future<void> _delete(ProjectMeta p) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('حذف التصميم؟'),
-        content: Text(p.name),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await StorageService.delete(p.id);
-      _refresh();
-    }
+    if (!await confirmDelete(context, p)) return;
+    await StorageService.delete(p.id);
+    _refresh();
+  }
+
+  Future<void> _open(ProjectMeta p) async {
+    final d = StorageService.load(p.id);
+    if (d == null) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => EditorPage(doc: d)));
+    _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تصاميم محفوظة')),
-      body: _projects.isEmpty
-          ? const Center(child: Text('لا توجد تصاميم محفوظة', style: TextStyle(color: AppColors.muted)))
-          : GridView.builder(
-              padding: const EdgeInsets.all(14),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.9),
-              itemCount: _projects.length,
-              itemBuilder: (context, i) {
-                final p = _projects[i];
-                return GestureDetector(
-                  onTap: () async {
-                    final d = StorageService.load(p.id);
-                    if (d == null) return;
-                    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => EditorPage(doc: d)));
-                    _refresh();
-                  },
-                  onLongPress: () => _delete(p),
-                  child: Container(
-                    decoration: BoxDecoration(color: AppColors.panel, borderRadius: BorderRadius.circular(8)),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(children: [
-                      Expanded(
-                        child: Container(
-                          width: double.infinity,
-                          color: AppColors.panel2,
-                          child: p.thumbPath != null
-                              ? Image.file(File(p.thumbPath!), fit: BoxFit.contain, key: ValueKey('${p.id}${p.updated.millisecondsSinceEpoch}'))
-                              : const Icon(Icons.image_outlined, color: AppColors.muted, size: 40),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Row(children: [
-                          Expanded(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                          Text('${p.w.round()}×${p.h.round()}', style: const TextStyle(fontSize: 10.5, color: AppColors.muted)),
-                        ]),
-                      ),
-                    ]),
-                  ),
-                );
-              },
-            ),
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
+        title: const Text('تصاميم محفوظة'),
+        actions: [
+          IconButton(
+            tooltip: _newest ? 'الأحدث أولاً' : 'الأقدم أولاً',
+            icon: const Icon(Icons.sort, color: AppColors.accent2),
+            onPressed: () => setState(() => _newest = !_newest),
+          ),
+          IconButton(icon: const Icon(Icons.check, color: AppColors.accent2), onPressed: () => Navigator.pop(context)),
+        ],
+      ),
+      body: Column(children: [
+        SwitchListTile(
+          title: const Text('حفظ تلقائي'),
+          value: _auto,
+          activeColor: AppColors.accent2,
+          onChanged: (v) async {
+            await StorageService.setAutosave(v);
+            setState(() => _auto = v);
+          },
+        ),
+        const Divider(height: 1, color: Colors.white10),
+        Expanded(child: SavedList(projects: sorted(_projects, _newest), onOpen: _open, onDelete: _delete)),
+      ]),
     );
   }
 }
