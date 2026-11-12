@@ -9,6 +9,7 @@ import '../../core/services/beauty_service.dart';
 import '../../core/services/export_service.dart';
 import '../../core/services/image_store.dart';
 import '../../core/services/media_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/color_matrices.dart';
 import '../poster_builder/model/doc.dart';
@@ -18,7 +19,7 @@ import '../poster_builder/ui/editor_page.dart';
 /// يبني تصميماً من صورة واحدة (يستخدم في الكاميرا والاستوديو).
 /// الفلتر يوضع على مستوى التصميم كله فيبقى قابلاً للتعديل داخل المحرر.
 Doc docFromPhoto(MediaRef m, {int preset = 0, bool mirror = false}) {
-  final k = math.min(1.0, 2048 / math.max(m.w, m.h));
+  final k = math.min(1.0, StorageService.maxImport / math.max(m.w, m.h));
   final w = (m.w * k).roundToDouble(), h = (m.h * k).roundToDouble();
   final d = Doc.blank(name: 'صورة', w: w, h: h);
   d.layers.add(Layer.create(LayerType.image, name: 'صورة')
