@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/services/export_service.dart';
 import '../../core/services/image_store.dart';
+import '../../core/services/media_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../poster_builder/model/doc.dart';
@@ -102,14 +103,17 @@ class SavedList extends StatelessWidget {
   }
 }
 
-/// إعدادات التطبيق (حالياً: الحفظ التلقائي).
-Future<void> showAppSettings(BuildContext context) => showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, set) => AlertDialog(
-          backgroundColor: AppColors.panel,
-          title: const Text('إعدادات التطبيق', style: TextStyle(color: AppColors.accent2)),
-          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+/// إعدادات التطبيق: الحفظ التلقائي، حجم الصور المستوردة، العلامة المائية.
+Future<void> showAppSettings(BuildContext context) async {
+  final wmCtrl = TextEditingController(text: StorageService.wmText);
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, set) => AlertDialog(
+        backgroundColor: AppColors.panel,
+        title: const Text('إعدادات التطبيق', style: TextStyle(color: AppColors.accent2)),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('حفظ تلقائي'),
@@ -139,11 +143,60 @@ Future<void> showAppSettings(BuildContext context) => showDialog<void>(
                   ),
                 ),
             ]),
+            const Divider(height: 28, color: Colors.white12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('علامة مائية على الصور المصدّرة'),
+              value: StorageService.wmOn,
+              activeColor: AppColors.accent2,
+              onChanged: (v) async {
+                await StorageService.setWmOn(v);
+                set(() {});
+              },
+            ),
+            TextField(
+              controller: wmCtrl,
+              decoration: const InputDecoration(hintText: 'نص العلامة (اسمك أو حسابك)'),
+              onChanged: (t) => StorageService.setWmText(t),
+            ),
+            const SizedBox(height: 10),
+            Row(children: [
+              if (StorageService.wmLogo != null)
+                Container(
+                  width: 44,
+                  height: 44,
+                  margin: const EdgeInsetsDirectional.only(end: 10),
+                  color: AppColors.panel2,
+                  child: Image.file(File(StorageService.wmLogo!), fit: BoxFit.contain),
+                ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.image_outlined, size: 18),
+                label: Text(StorageService.wmLogo == null ? 'اختيار شعار' : 'تغيير الشعار'),
+                onPressed: () async {
+                  final m = await MediaService.pick();
+                  if (m == null) return;
+                  await StorageService.setWmLogo(m.path);
+                  set(() {});
+                },
+              ),
+              if (StorageService.wmLogo != null)
+                IconButton(
+                  tooltip: 'إزالة الشعار',
+                  icon: const Icon(Icons.delete_outline, color: AppColors.accent2),
+                  onPressed: () async {
+                    await StorageService.setWmLogo(null);
+                    set(() {});
+                  },
+                ),
+            ]),
           ]),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
         ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
       ),
-    );
+    ),
+  );
+  wmCtrl.dispose();
+}
 
 /// لوحة «حفظ التصميم» داخل المحرر.
 Future<void> showSaveDesignPanel(BuildContext context, Doc doc, ImageStore images) =>
