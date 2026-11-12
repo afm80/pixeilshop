@@ -136,6 +136,18 @@ class _EditorShellState extends State<EditorShell> {
   }
 
   void _open(String t) {
+    if (t == '@text') {
+      _newText();
+      return;
+    }
+    if (t == '@crop') {
+      final imgs = bloc.state.doc.layers.where((x) => x.type == LayerType.image);
+      if (imgs.isNotEmpty) {
+        bloc.add(LayerSelected(imgs.first.id));
+        showCropDialog(context, imgs.first, widget.images);
+      }
+      return;
+    }
     setState(() {
       _tool = t;
       _addMenu = _colorMenu = _shapes = false;

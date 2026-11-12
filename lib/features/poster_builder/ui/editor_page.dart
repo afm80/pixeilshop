@@ -75,6 +75,18 @@ class _EditorPageState extends State<EditorPage> {
         case 'grade':
           controller.openTool?.call('dfilters');
           break;
+        case 'text':
+          controller.openTool?.call('@text');
+          break;
+        case 'brush':
+          controller.openTool?.call('brush');
+          break;
+        case 'stickers':
+          controller.openTool?.call('stickers');
+          break;
+        case 'crop':
+          controller.openTool?.call('@crop');
+          break;
       }
     });
   }
