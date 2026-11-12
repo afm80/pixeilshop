@@ -6,7 +6,7 @@ import 'adjust.dart';
 /// draw = طبقة رسم حر (فرشاة). يُضاف في النهاية للحفاظ على فهارس المشاريع المحفوظة.
 enum LayerType { text, image, shape, draw }
 
-enum ShapeKind { rect, circle, triangle, star, diamond, line, cone, pentagon, hexagon, heptagon, octagon, nonagon, decagon }
+enum ShapeKind { rect, circle, triangle, star, diamond, line, cone, pentagon, hexagon, heptagon, octagon, nonagon, decagon, poly }
 
 /// ضربة ممحاة (BlendMode.clear) بإحداثيات نسبية لعرض الطبقة.
 class EraseStroke {
@@ -129,6 +129,9 @@ class Layer {
   ShapeKind shape = ShapeKind.rect;
   double cornerRadius = 0;
 
+  /// نقاط المضلع الحر (x,y متتابعة) بإحداثيات نسبية 0..1 داخل مستطيل الطبقة.
+  List<double> polyPts = [];
+
   /// نقطة محلية (مركزها صفر) -> إحداثيات التصميم.
   Offset localToDoc(Offset l) {
     final dx = (flipX ? -l.dx : l.dx) * scale;
@@ -221,6 +224,7 @@ class Layer {
         'er': erase.map((e) => e.toJson()).toList(),
         'sh': shape.index,
         'cr': cornerRadius,
+        'pp': polyPts,
       };
 
   factory Layer.fromJson(Map<String, dynamic> m) {
@@ -296,6 +300,7 @@ class Layer {
         .toList();
     l.shape = ShapeKind.values[i('sh', 0)];
     l.cornerRadius = d('cr', 0);
+    l.polyPts = ((m['pp'] as List?) ?? const []).map((e) => (e as num).toDouble()).toList();
     return l;
   }
 }
