@@ -5,8 +5,9 @@ import '../../features/poster_builder/model/adjust.dart';
 
 /// فلتر جاهز (مصفوفة 5x4 لـ ColorFilter.matrix) مع ألوان معاينة.
 class FilterPreset {
-  const FilterPreset(this.name, this.matrix, this.swatch1, this.swatch2, {this.smooth = 0});
+  const FilterPreset(this.name, this.matrix, this.swatch1, this.swatch2, {this.smooth = 0, this.bgBlur = 0});
   final double smooth; // تنعيم البشرة 0..1
+  final double bgBlur; // تمويه الخلفية 0..1 (يُطبَّق في الكاميرا فقط)
   final String name;
   final List<double> matrix;
   final Color swatch1, swatch2;
@@ -157,14 +158,14 @@ class ColorMatrices {
     FilterPreset('سايبر', _chain([hueRotate(40), saturation(1.4), contrast(1.1), channelScale(1, 1, 1.1, bo: 8)]), const Color(0xFFFF2BD6), const Color(0xFF2BD9FF)),
     FilterPreset('باستيل', _chain([contrast(0.85), brightness(0.12), saturation(0.8)]), const Color(0xFFF7C6D9), const Color(0xFFBFE3F5)),
     FilterPreset('درامي', _chain([contrast(1.35), saturation(1.2), brightness(-0.05)]), const Color(0xFF7A1F1F), const Color(0xFF111111)),
-    FilterPreset('تجميل', _chain([channelScale(1.04, 1.0, 0.98, ro: 6, go: 3, bo: 3), brightness(0.03)]), const Color(0xFFFFD1C1), const Color(0xFFFFEFE8), smooth: 0.7),
-    FilterPreset('تجميل ناعم', _chain([saturation(1.06), brightness(0.05), contrast(0.95)]), const Color(0xFFFFC2D4), const Color(0xFFFFF0F5), smooth: 1.0),
+    FilterPreset('تجميل', _chain([channelScale(1.04, 1.0, 0.98, ro: 6, go: 3, bo: 3), brightness(0.03)]), const Color(0xFFFFD1C1), const Color(0xFFFFEFE8), smooth: 0.7, bgBlur: 0.6),
+    FilterPreset('تجميل ناعم', _chain([saturation(1.06), brightness(0.05), contrast(0.95)]), const Color(0xFFFFC2D4), const Color(0xFFFFF0F5), smooth: 1.0, bgBlur: 1.0),
   ];
 
   /// شدة تنعيم البشرة الفعلية لإعدادات [Adjust] (من الفلتر الجاهز + التنعيم اليدوي).
   static double smoothFor(Adjust a) {
     var k = a.smooth;
-    if (a.preset > 0 && a.preset < presets.length) {
+    if (!a.noPresetSmooth && a.preset > 0 && a.preset < presets.length) {
       k = math.max(k, presets[a.preset].smooth * a.presetAmount.clamp(0.0, 1.0).toDouble());
     }
     return k.clamp(0.0, 1.0).toDouble();
