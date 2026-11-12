@@ -9,6 +9,7 @@ import '../../../core/services/media_service.dart';
 import '../bloc/canvas_bloc.dart';
 import '../model/layer.dart';
 import 'canvas_view.dart';
+import '../../home/saved_ui.dart';
 import 'crop_dialog.dart';
 import 'editor_panel.dart';
 import 'font_picker.dart';
@@ -295,6 +296,8 @@ class _EditorShellState extends State<EditorShell> {
                     widget.onExport();
                   case 'share':
                     widget.onShare();
+                  case 'settings':
+                    showAppSettings(context);
                   case 'exit':
                     widget.onExit();
                 }
@@ -305,6 +308,7 @@ class _EditorShellState extends State<EditorShell> {
                   ('save', 'حفظ التصميم', Icons.save_outlined),
                   ('img', 'حفظ الصورة', Icons.image_outlined),
                   ('share', 'مشاركة الصورة', Icons.share_outlined),
+                  ('settings', 'إعدادات التطبيق', Icons.settings_outlined),
                   ('exit', 'خروج', Icons.logout),
                 ])
                   PopupMenuItem<String>(
