@@ -185,7 +185,7 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final img = await ExportService.render(_doc, _images);
+      final img = await ExportService.render(_doc, _images, watermark: true);
       final bytes = await ExportService.encode(img, ExportFormat.jpg, quality: 95);
       await ExportService.saveToGallery(bytes, ExportFormat.jpg);
       messenger.showSnackBar(const SnackBar(content: Text('تم الحفظ في المعرض')));
