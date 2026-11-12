@@ -24,6 +24,7 @@ import 'editor_panel.dart';
 import 'editor_shell.dart';
 import 'export_sheet.dart';
 import '../../home/new_design_page.dart';
+import '../../home/saved_ui.dart';
 
 /// startTool: '' | 'rmbg' | 'anime' | 'grade'
 class EditorPage extends StatefulWidget {
@@ -119,8 +120,12 @@ class _EditorPageState extends State<EditorPage> {
 
   void _scheduleSave() {
     _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(milliseconds: 700), () {
-      StorageService.save(canvas.state.doc);
+    _saveTimer = Timer(const Duration(milliseconds: 1200), () async {
+      final doc = canvas.state.doc;
+      try {
+        await StorageService.save(doc);
+        await ExportService.thumbnail(doc, images, doc.id);
+      } catch (_) {}
     });
   }
 
@@ -175,6 +180,7 @@ class _EditorPageState extends State<EditorPage> {
           BlocListener<CanvasBloc, CanvasState>(
             listener: (context, st) {
               images.ensureDoc(st.doc);
+              if (StorageService.autosave) _scheduleSave();
               if (controller.eraserLayerId != null && st.selectedId != controller.eraserLayerId) {
                 controller.stopEraser();
               }
@@ -227,16 +233,7 @@ class _EditorPageState extends State<EditorPage> {
                     if (!mounted) return;
                     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const NewDesignPage(colored: false)));
                   },
-                  onSaveDesign: () async {
-                    _saveTimer?.cancel();
-                    try {
-                      await StorageService.save(canvas.state.doc);
-                      await ExportService.thumbnail(canvas.state.doc, images, canvas.state.doc.id);
-                      _toast('تم حفظ التصميم');
-                    } catch (_) {
-                      _toast('تعذر حفظ التصميم');
-                    }
-                  },
+                  onSaveDesign: () => showSaveDesignPanel(ctx, canvas.state.doc, images),
                   onShare: () => showExportSheet(ctx, canvas.state.doc, images, share: true),
                   onExit: _confirmExit,
                   onExport: () => showExportSheet(ctx, canvas.state.doc, images),

@@ -912,7 +912,6 @@ const List<(String, IconData)> kIconEntries = [
   ('gif box', IconData(0xe7a3, fontFamily: 'MaterialIcons')),
   ('girl', IconData(0xeb68, fontFamily: 'MaterialIcons')),
   ('gite', IconData(0xe58b, fontFamily: 'MaterialIcons')),
-  ('goat', IconData(0x10fffd, fontFamily: 'MaterialIcons')),
   ('golf course', IconData(0xeb45, fontFamily: 'MaterialIcons')),
   ('gpp bad', IconData(0xf012, fontFamily: 'MaterialIcons')),
   ('gpp good', IconData(0xf013, fontFamily: 'MaterialIcons')),
