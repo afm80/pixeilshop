@@ -40,6 +40,7 @@ dependencies:
   google_mlkit_commons: any
   google_mlkit_subject_segmentation: any
   google_mlkit_selfie_segmentation: any
+  google_mlkit_face_detection: any
   speech_to_text: ^7.0.0
 
 dev_dependencies:
