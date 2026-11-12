@@ -100,3 +100,33 @@ for name, snippet in (('build.gradle.kts', kts_fix), ('build.gradle', groovy_fix
         if 'pixeilshop: force compileSdk' not in t:
             f.write_text(t + snippet, encoding='utf-8')
         print('compileSdk fix appended to', f)
+
+# تحليل Lint داخل بعض الإضافات (مثل camera_android_camerax) ينهار في بيئة البناء (خلل في أداة lint نفسها).
+# لا حاجة له لبناء الـ APK، فنعطّل كل مهام lint في كل المشاريع.
+kts_lint = '''
+// --- pixeilshop: disable lint tasks (lint crashes on some plugins) ---
+subprojects {
+    tasks.configureEach {
+        if (name.contains("lint", ignoreCase = true)) {
+            enabled = false
+        }
+    }
+}
+'''
+groovy_lint = '''
+// --- pixeilshop: disable lint tasks (lint crashes on some plugins) ---
+subprojects {
+    tasks.configureEach { t ->
+        if (t.name.toLowerCase().contains("lint")) {
+            t.enabled = false
+        }
+    }
+}
+'''
+for name, snippet in (('build.gradle.kts', kts_lint), ('build.gradle', groovy_lint)):
+    f = pathlib.Path('android') / name
+    if f.exists():
+        t = f.read_text(encoding='utf-8')
+        if 'pixeilshop: disable lint' not in t:
+            f.write_text(t + snippet, encoding='utf-8')
+        print('lint disabled in', f)
