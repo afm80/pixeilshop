@@ -5,7 +5,7 @@ import '../poster_builder/model/doc.dart';
 import '../poster_builder/ui/editor_page.dart';
 import '../poster_builder/ui/editor_shell.dart' show DotsPainter;
 
-const double kMaxSide = 1536;
+const double kMaxSide = 2560;
 const _yellow = Color(0xFFFFC400);
 
 // الترتيب من اليسار لليمين كما في بوستر شوب (بدون «قوالب»)
@@ -17,6 +17,26 @@ const _ratios = <(String, double, double)>[
   ('1/1', 1, 1),
 ];
 const int _custom = 5; // تحكم كامل
+
+/// مقاسات منصات التواصل: (الاسم، العرض، الطول)
+const _social = <(String, int, int)>[
+  ('بروفايل فيسبوك', 320, 320),
+  ('غلاف فيسبوك', 820, 312),
+  ('منشور فيسبوك', 1200, 630),
+  ('ستوري فيسبوك', 1080, 1920),
+  ('بروفايل انستغرام', 320, 320),
+  ('منشور انستغرام', 1080, 1080),
+  ('بورتريه انستغرام', 1080, 1350),
+  ('ستوري / ريلز', 1080, 1920),
+  ('صورة مصغرة يوتيوب', 1280, 720),
+  ('غلاف يوتيوب', 2560, 1440),
+  ('بروفايل يوتيوب', 800, 800),
+  ('منشور X', 1600, 900),
+  ('غلاف X', 1500, 500),
+  ('بروفايل X', 400, 400),
+  ('تيك توك', 1080, 1920),
+  ('غلاف لينكدإن', 1584, 396),
+];
 
 List<int> _buildPalette() {
   Color hsv(double h, double s, double v) => HSVColor.fromAHSV(1, h % 360, s, v).toColor();
@@ -61,6 +81,7 @@ class _NewDesignPageState extends State<NewDesignPage> {
   final _pal = _buildPalette();
   int _color = 0xFFFFFFFF;
   int _ratio = 4;
+  int _social_ = -1; // مقاس التواصل المحدد (-1 = لا شيء)
 
   @override
   void dispose() {
@@ -71,7 +92,18 @@ class _NewDesignPageState extends State<NewDesignPage> {
 
   double _val(TextEditingController c) => (double.tryParse(c.text.replaceAll(',', '.')) ?? 1024).clamp(100, kMaxSide).toDouble();
 
+  void _setSocial(int i) {
+    final r = _social[i];
+    setState(() {
+      _social_ = i;
+      _ratio = _custom;
+      _w.text = r.$2.toString();
+      _h.text = r.$3.toString();
+    });
+  }
+
   void _setRatio(int i) {
+    _social_ = -1;
     if (i == _custom) {
       setState(() => _ratio = i);
       return;
@@ -123,7 +155,10 @@ class _NewDesignPageState extends State<NewDesignPage> {
               controller: c,
               keyboardType: const TextInputType.numberWithOptions(decimal: false),
               textAlign: TextAlign.center,
-              onChanged: (_) => setState(() => _ratio = _custom),
+              onChanged: (_) => setState(() {
+                _ratio = _custom;
+                _social_ = -1;
+              }),
               decoration: const InputDecoration(
                 border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
@@ -195,6 +230,38 @@ class _NewDesignPageState extends State<NewDesignPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: SizedBox(
+                height: 50,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  reverse: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  children: [
+                    for (var i = _social.length - 1; i >= 0; i--)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: InkWell(
+                          onTap: () => _setSocial(i),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: _social_ == i ? _yellow : const Color(0xFF333333),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                              Text(_social[i].$1, style: TextStyle(fontSize: 12, color: _social_ == i ? Colors.black : Colors.white)),
+                              Text('${_social[i].$2}×${_social[i].$3}', style: TextStyle(fontSize: 10, color: _social_ == i ? Colors.black54 : Colors.white54)),
+                            ]),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
             Expanded(
               child: LayoutBuilder(builder: (context, box) {
                 var pw = box.maxWidth - 80, ph = pw / ar;
@@ -226,7 +293,7 @@ class _NewDesignPageState extends State<NewDesignPage> {
             if (widget.colored) ...[
               const Padding(
                 padding: EdgeInsets.only(bottom: 4),
-                child: Text('ملاحظة: أقصى طول وعرض هو 1536 بكسل.', style: TextStyle(fontSize: 11, color: Colors.white54)),
+                child: Text('ملاحظة: أقصى طول وعرض هو 2560 بكسل.', style: TextStyle(fontSize: 11, color: Colors.white54)),
               ),
               SizedBox(
                 height: 4 * 46.0,
@@ -272,7 +339,7 @@ class _NewDesignPageState extends State<NewDesignPage> {
             ] else
               const Padding(
                 padding: EdgeInsets.only(bottom: 14),
-                child: Text('ملاحظة: أقصى طول وعرض هو 1536 بكسل.', style: TextStyle(fontSize: 11, color: Colors.white54)),
+                child: Text('ملاحظة: أقصى طول وعرض هو 2560 بكسل.', style: TextStyle(fontSize: 11, color: Colors.white54)),
               ),
           ]),
         ),
