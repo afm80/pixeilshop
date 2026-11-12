@@ -32,6 +32,14 @@ class StorageService {
   static bool get autosave => _setBox?.get('autosave') == '1';
   static Future<void> setAutosave(bool v) async => _setBox?.put('autosave', v ? '1' : '0');
 
+  /// الحد الأقصى لأكبر بُعد للصور المستوردة (1280 / 1536 / 2048).
+  static int get maxImport {
+    final v = int.tryParse(_setBox?.get('maxImport') ?? '') ?? 2048;
+    return const [1280, 1536, 2048].contains(v) ? v : 2048;
+  }
+
+  static Future<void> setMaxImport(int v) async => _setBox?.put('maxImport', '$v');
+
   static bool exists(String id) => _b.containsKey(id);
 
   /// يحفظ نسخة من التصميم تحت معرّف واسم محددين (حفظ جديد أو كتابة فوق تصميم محفوظ).
