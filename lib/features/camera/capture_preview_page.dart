@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 
+import '../../core/services/beauty_service.dart';
 import '../../core/services/export_service.dart';
 import '../../core/services/image_store.dart';
 import '../../core/services/media_service.dart';
@@ -83,6 +85,61 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
   bool _handedOff = false; // انتقلت الصورة للمحرر، فلا تُحذف
   String _label = '';
   Timer? _labelTimer;
+  BeautyService? _beauty;
+  String? _bakedPath; // الصورة المجمَّلة (تنعيم داخل الشخص + تمويه الخلفية)
+  bool _beautyBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncBeauty();
+    });
+  }
+
+  String get _shownPath => _bakedPath ?? widget.photo.path;
+
+  /// يطبّق التجميل الحقيقي إن كان الفلتر الحالي من فلاتر التجميل، وإلا يعيد الصورة الأصلية.
+  Future<void> _syncBeauty() async {
+    final idx = _preset;
+    final pr = ColorMatrices.presets[idx];
+    final isBeauty = pr.smooth > 0 || pr.bgBlur > 0;
+    _doc.adjust.noPresetSmooth = isBeauty;
+    if (!isBeauty) {
+      _setBaked(null);
+      return;
+    }
+    setState(() => _beautyBusy = true);
+    String? out;
+    try {
+      _beauty ??= BeautyService(widget.photo.path);
+      out = await _beauty!.bake(smooth: pr.smooth, bgBlur: pr.bgBlur);
+    } catch (e) {
+      debugPrint('beauty failed: $e');
+    }
+    if (!mounted || idx != _preset) {
+      if (out != null) File(out).delete().catchError((_) => File(out!));
+      return; // طلب أحدث يتولّى الأمر
+    }
+    _setBaked(out);
+    setState(() => _beautyBusy = false);
+    if (out == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لم يُكتشف شخص في الصورة، لم يُطبَّق التجميل')));
+    }
+  }
+
+  void _setBaked(String? path) {
+    final old = _bakedPath;
+    if (old != null && old != path) File(old).delete().catchError((_) => File(old));
+    _bakedPath = path;
+    for (final l in _doc.layers) {
+      if (l.type == LayerType.image) {
+        l.path = path ?? widget.photo.path;
+        break;
+      }
+    }
+    if (mounted) setState(() {});
+  }
 
   int get _preset => _doc.adjust.preset;
 
@@ -90,8 +147,11 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
   void dispose() {
     _labelTimer?.cancel();
     _images.dispose();
+    _beauty?.dispose();
     if (!_handedOff) {
       File(widget.photo.path).delete().catchError((_) => File(widget.photo.path));
+      final b = _bakedPath;
+      if (b != null) File(b).delete().catchError((_) => File(b));
     }
     super.dispose();
   }
@@ -103,6 +163,7 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
       _doc.adjust.preset = v;
       _label = ColorMatrices.presets[v].name;
     });
+    _syncBeauty();
     _labelTimer?.cancel();
     _labelTimer = Timer(const Duration(milliseconds: 900), () {
       if (mounted) setState(() => _label = '');
@@ -116,7 +177,7 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
   }
 
   Future<void> _save() async {
-    if (_busy) return;
+    if (_busy || _beautyBusy) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -133,6 +194,7 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
 
   /// يفتح المحرر على أداة معينة ('' = المحرر كاملاً).
   void _toEditor(String tool) {
+    if (_beautyBusy) return;
     _handedOff = true;
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => EditorPage(doc: _doc, startTool: tool)));
   }
@@ -147,7 +209,7 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
   @override
   Widget build(BuildContext context) {
     final matrix = ColorMatrices.forAdjust(_doc.adjust);
-    Widget image = Image.file(File(widget.photo.path), fit: BoxFit.contain);
+    Widget image = Image.file(File(_shownPath), fit: BoxFit.contain, key: ValueKey(_shownPath), gaplessPlayback: true);
     if (widget.mirror) {
       image = Transform(alignment: Alignment.center, transform: Matrix4.diagonal3Values(-1, 1, 1), child: image);
     }
@@ -164,6 +226,8 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
                 child: ColorFiltered(colorFilter: ColorFilter.matrix(matrix), child: image),
               ),
             ),
+            if (_beautyBusy)
+              const Center(child: SizedBox(width: 38, height: 38, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.accent))),
             if (_label.isNotEmpty)
               Center(
                 child: IgnorePointer(
