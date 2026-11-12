@@ -13,6 +13,7 @@ import '../model/doc.dart';
 import '../model/layer.dart';
 import 'canvas_view.dart';
 import 'editor_panel.dart';
+import 'sticker_data.g.dart';
 
 const kYellow = Color(0xFFFFC400);
 
@@ -462,21 +463,121 @@ class _Brush extends StatelessWidget {
   }
 }
 
-class _Stickers extends StatelessWidget {
+class _Stickers extends StatefulWidget {
   const _Stickers({required this.c});
   final ToolCtx c;
   @override
+  State<_Stickers> createState() => _StickersState();
+}
+
+class _StickersState extends State<_Stickers> {
+  int _tab = 0; // 0..n-1 مجموعات الإيموجي، n = الأيقونات
+  String _q = '';
+
+  @override
   Widget build(BuildContext context) {
+    final c = widget.c;
     final w = c.doc.w;
-    Widget cell(Widget child, VoidCallback f) => InkWell(onTap: f, child: Container(width: 52, height: 52, alignment: Alignment.center, color: const Color(0xFF303030), child: child));
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(8),
-      child: Wrap(spacing: 6, runSpacing: 6, children: [
-        for (final e in kStickerList)
-          cell(Text(e, style: const TextStyle(fontSize: 28)), () => c.addText(e, fontSize: w * 0.2, width: w * 0.4)),
-        for (final ic in kIconList)
-          cell(Icon(ic, color: kYellow, size: 28), () => c.addText(String.fromCharCode(ic.codePoint), font: FontService.iconFont, fontSize: w * 0.2, width: w * 0.26)),
-      ]),
+    final n = kEmojiGroups.length;
+    final q = _q.trim().toLowerCase();
+
+    Widget cell(Widget child, VoidCallback f) => InkWell(
+          onTap: f,
+          child: Container(alignment: Alignment.center, color: const Color(0xFF303030), child: child),
+        );
+    Widget emojiCell(String e) => cell(Text(e, style: const TextStyle(fontSize: 28)), () => c.addText(e, fontSize: w * 0.2, width: w * 0.4));
+    Widget iconCell(IconData ic) => cell(
+          Icon(ic, color: kYellow, size: 28),
+          () => c.addText(String.fromCharCode(ic.codePoint), font: FontService.iconFont, fontSize: w * 0.2, width: w * 0.26),
+        );
+
+    final cells = <Widget>[];
+    if (q.isNotEmpty) {
+      for (final g in kEmojiGroups) {
+        for (final e in g.$3) {
+          if (e.$2.contains(q)) cells.add(emojiCell(e.$1));
+        }
+      }
+      for (final ic in kIconEntries) {
+        if (ic.$1.contains(q)) cells.add(iconCell(ic.$2));
+      }
+    } else if (_tab < n) {
+      for (final e in kEmojiGroups[_tab].$3) {
+        cells.add(emojiCell(e.$1));
+      }
+    } else {
+      for (final ic in kIconEntries) {
+        cells.add(iconCell(ic.$2));
+      }
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
+          child: SizedBox(
+            height: 38,
+            child: TextField(
+              onChanged: (v) => setState(() => _q = v),
+              style: const TextStyle(fontSize: 14),
+              textDirection: TextDirection.ltr,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'بحث (بالإنجليزية: heart, star, smile...)',
+                hintStyle: const TextStyle(fontSize: 12, color: Colors.white38),
+                prefixIcon: const Icon(Icons.search, size: 20, color: kYellow),
+                filled: true,
+                fillColor: const Color(0xFF303030),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 42,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            children: [
+              for (var i = 0; i < n; i++)
+                InkWell(
+                  onTap: () => setState(() {
+                    _tab = i;
+                    _q = '';
+                  }),
+                  child: Container(
+                    width: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(border: Border(bottom: BorderSide(color: (q.isEmpty && _tab == i) ? kYellow : Colors.transparent, width: 3))),
+                    child: Text(kEmojiGroups[i].$2, style: const TextStyle(fontSize: 22)),
+                  ),
+                ),
+              InkWell(
+                onTap: () => setState(() {
+                  _tab = n;
+                  _q = '';
+                }),
+                child: Container(
+                  width: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(border: Border(bottom: BorderSide(color: (q.isEmpty && _tab == n) ? kYellow : Colors.transparent, width: 3))),
+                  child: const Icon(Icons.category_outlined, color: kYellow, size: 24),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: cells.isEmpty
+              ? const Center(child: Text('لا نتائج', style: TextStyle(color: Colors.white54)))
+              : GridView.builder(
+                  padding: const EdgeInsets.all(8),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 56, mainAxisSpacing: 6, crossAxisSpacing: 6),
+                  itemCount: cells.length,
+                  itemBuilder: (_, i) => cells[i],
+                ),
+        ),
+      ],
     );
   }
 }
