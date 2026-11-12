@@ -13,6 +13,7 @@ import '../../home/saved_ui.dart';
 import 'crop_dialog.dart';
 import 'editor_panel.dart';
 import 'font_picker.dart';
+import 'poly_draw_page.dart';
 import 'text_dialog.dart';
 import 'tool_screens.dart';
 import '../model/doc.dart';
@@ -88,6 +89,17 @@ class _ShapeIcon extends CustomPainter {
         c.drawPath(poly(9), p);
       case ShapeKind.decagon:
         c.drawPath(poly(10), p);
+      case ShapeKind.poly:
+        c.drawPath(
+          Path()
+            ..moveTo(4, s.height * 0.35)
+            ..lineTo(s.width * 0.45, 3)
+            ..lineTo(s.width - 3, s.height * 0.5)
+            ..lineTo(s.width * 0.7, s.height - 3)
+            ..lineTo(s.width * 0.25, s.height * 0.8)
+            ..close(),
+          p,
+        );
       default:
         c.drawRect(r.deflate(3), p);
     }
@@ -524,6 +536,37 @@ class _EditorShellState extends State<EditorShell> {
         }),
       ];
 
+  /// يفتح صفحة رسم المضلع ثم يضيف النتيجة كطبقة شكل.
+  Future<void> _drawPolygon() async {
+    final doc = bloc.state.doc;
+    final pts = await Navigator.of(context).push<List<Offset>>(
+      MaterialPageRoute(builder: (_) => PolygonDrawPage(doc: doc, images: widget.images)),
+    );
+    if (pts == null || pts.length < 3 || !mounted) return;
+    var minX = 1.0, minY = 1.0, maxX = 0.0, maxY = 0.0;
+    for (final p in pts) {
+      minX = math.min(minX, p.dx);
+      minY = math.min(minY, p.dy);
+      maxX = math.max(maxX, p.dx);
+      maxY = math.max(maxY, p.dy);
+    }
+    final w = math.max(24.0, (maxX - minX) * doc.w), h = math.max(24.0, (maxY - minY) * doc.h);
+    final cx = (minX + maxX) / 2 * doc.w, cy = (minY + maxY) / 2 * doc.h;
+    final rel = <double>[];
+    for (final p in pts) {
+      rel.add(maxX > minX ? (p.dx - minX) / (maxX - minX) : 0.5);
+      rel.add(maxY > minY ? (p.dy - minY) / (maxY - minY) : 0.5);
+    }
+    bloc.add(const ShapeLayerAdded(ShapeKind.poly));
+    bloc.add(LayerMutated((l) {
+      l.x = cx;
+      l.y = cy;
+      l.w = w;
+      l.h = h;
+      l.polyPts = rel;
+    }));
+  }
+
   Widget _shapesRow() {
     const items = <(String, ShapeKind)>[
       ('مستطيل', ShapeKind.rect),
@@ -536,6 +579,7 @@ class _EditorShellState extends State<EditorShell> {
       ('ثماني', ShapeKind.octagon),
       ('تساعي', ShapeKind.nonagon),
       ('عشاري', ShapeKind.decagon),
+      ('ارسم مضلع', ShapeKind.poly),
     ];
     return Container(
       height: 74,
@@ -553,8 +597,12 @@ class _EditorShellState extends State<EditorShell> {
           for (final s in items)
             InkWell(
               onTap: () {
-                bloc.add(ShapeLayerAdded(s.$2));
                 setState(() => _shapes = false);
+                if (s.$2 == ShapeKind.poly) {
+                  _drawPolygon();
+                } else {
+                  bloc.add(ShapeLayerAdded(s.$2));
+                }
               },
               child: SizedBox(
                 width: 72,
