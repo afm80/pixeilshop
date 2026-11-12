@@ -102,6 +102,28 @@ class SavedList extends StatelessWidget {
   }
 }
 
+/// إعدادات التطبيق (حالياً: الحفظ التلقائي).
+Future<void> showAppSettings(BuildContext context) => showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => AlertDialog(
+          backgroundColor: AppColors.panel,
+          title: const Text('إعدادات التطبيق', style: TextStyle(color: AppColors.accent2)),
+          content: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('حفظ تلقائي'),
+            value: StorageService.autosave,
+            activeColor: AppColors.accent2,
+            onChanged: (v) async {
+              await StorageService.setAutosave(v);
+              set(() {});
+            },
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+        ),
+      ),
+    );
+
 /// لوحة «حفظ التصميم» داخل المحرر.
 Future<void> showSaveDesignPanel(BuildContext context, Doc doc, ImageStore images) =>
     showDialog<void>(context: context, builder: (_) => _SavePanel(doc: doc, images: images));
