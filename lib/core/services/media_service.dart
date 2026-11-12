@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -55,8 +56,29 @@ class MediaService {
   /// ينسخ الملف إلى مجلد التطبيق (ليبقى بعد حذف الملف الأصلي) ويقرأ أبعاده.
   static Future<MediaRef> importFile(String src) async {
     final ext = p.extension(src).replaceFirst('.', '').toLowerCase();
-    final dst = await _newPath(ext.isEmpty ? 'jpg' : ext);
-    await File(src).copy(dst);
+    var dst = await _newPath(ext.isEmpty ? 'jpg' : ext);
+    var done = false;
+    // صور JPEG/HEIC: نثبّت الاتجاه الصحيح داخل البكسلات ونزيل EXIF، فيتطابق ما يراه المحرر وML Kit
+    if (const ['jpg', 'jpeg', 'heic', 'heif'].contains(ext)) {
+      try {
+        final out = await _newPath('jpg');
+        final r = await FlutterImageCompress.compressAndGetFile(
+          src,
+          out,
+          quality: 96,
+          minWidth: 100000,
+          minHeight: 100000,
+          autoCorrectionAngle: true,
+          keepExif: false,
+          format: CompressFormat.jpeg,
+        );
+        if (r != null && await File(r.path).exists()) {
+          dst = r.path;
+          done = true;
+        }
+      } catch (_) {}
+    }
+    if (!done) await File(src).copy(dst);
     final bytes = await File(dst).readAsBytes();
     final codec = await ui.instantiateImageCodec(bytes);
     final img = (await codec.getNextFrame()).image;

@@ -19,6 +19,10 @@ class BeautyService {
   ui.Image? _src;
   ui.Image? _mask;
   bool _maskTried = false;
+  List<Rect> _faces = const [];
+
+  /// هل وُجد وجه واحد على الأقل (بعد [prepare]).
+  bool get hasFace => _faces.isNotEmpty;
 
   /// هل وُجد شخص في الصورة (بعد استدعاء [prepare]).
   bool get hasPerson => _mask != null;
@@ -28,6 +32,7 @@ class BeautyService {
     final bytes = await File(path).readAsBytes();
     var codec = await ui.instantiateImageCodec(bytes);
     var img = (await codec.getNextFrame()).image;
+    final origW = img.width;
     final m = math.max(img.width, img.height);
     if (m > 2048) {
       final k = 2048 / m;
@@ -36,6 +41,8 @@ class BeautyService {
     }
     _src = img;
     _maskTried = true;
+    final k = img.width / origW;
+    _faces = [for (final r in await _ml.faceBoxes(path)) Rect.fromLTRB(r.left * k, r.top * k, r.right * k, r.bottom * k)];
     final seg = await _ml.segmentSelfie(path, img.width, img.height);
     if (seg == null) return;
     // نحتفظ بالقناع فقط إذا كان فيه شخص فعلاً (نسبة معقولة من البكسلات)
@@ -89,11 +96,18 @@ class BeautyService {
       c.restore();
     }
 
-    // 3) تنعيم البشرة داخل الشخص فقط
-    if (smooth > 0.01) {
+    // 3) تنعيم البشرة داخل الوجه فقط (ومن ضمن الشخص)
+    if (smooth > 0.01 && _faces.isNotEmpty) {
       final s = big / 200 * smooth + 1;
       c.saveLayer(rect, Paint()..color = Color.fromRGBO(255, 255, 255, (0.6 * smooth).clamp(0.0, 0.9).toDouble()));
       c.drawImage(src, Offset.zero, Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: s, sigmaY: s, tileMode: TileMode.clamp));
+      // مناطق الوجوه: بيضاوي أوسع قليلاً من مستطيل الوجه بحواف ناعمة
+      c.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
+      for (final f in _faces) {
+        final oval = Rect.fromCenter(center: f.center.translate(0, f.height * 0.04), width: f.width * 1.22, height: f.height * 1.3);
+        c.drawOval(oval, Paint()..color = const Color(0xFFFFFFFF)..maskFilter = MaskFilter.blur(BlurStyle.normal, f.width / 10));
+      }
+      c.restore();
       c.drawImageRect(mask, maskSrc, rect, Paint()..blendMode = BlendMode.dstIn..imageFilter = maskPaint.imageFilter);
       c.restore();
     }

@@ -2,7 +2,10 @@ import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'dart:ui' show Rect;
+
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'package:google_mlkit_subject_segmentation/google_mlkit_subject_segmentation.dart';
 
@@ -58,6 +61,24 @@ class MlKitService {
     } finally {
       try {
         seg?.close();
+      } catch (_) {}
+    }
+  }
+
+  /// مستطيلات الوجوه (بإحداثيات بكسلات الصورة). فارغة عند الفشل.
+  Future<List<Rect>> faceBoxes(String path) async {
+    if (!_supported) return const [];
+    FaceDetector? fd;
+    try {
+      fd = FaceDetector(options: FaceDetectorOptions(performanceMode: FaceDetectorMode.accurate, minFaceSize: 0.08));
+      final faces = await fd.processImage(InputImage.fromFilePath(path));
+      return [for (final f in faces) f.boundingBox];
+    } catch (e) {
+      debugPrint('face detection failed: $e');
+      return const [];
+    } finally {
+      try {
+        fd?.close();
       } catch (_) {}
     }
   }
