@@ -10,19 +10,11 @@ s = manifest.read_text(encoding='utf-8')
 perms = (
     '    <uses-permission android:name="android.permission.INTERNET"/>\n'
     '    <uses-permission android:name="android.permission.RECORD_AUDIO"/>\n'
+    '    <uses-permission android:name="android.permission.CAMERA"/>\n'
     '    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n'
 )
-if 'RECORD_AUDIO' not in s:
+if 'RECORD_AUDIO' not in s or 'permission.CAMERA' not in s:
     s = s.replace('<application', perms + '    <application', 1)
-
-if 'android.permission.CAMERA' not in s:
-    s = s.replace(
-        '<application',
-        '    <uses-permission android:name="android.permission.CAMERA"/>\n'
-        '    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n'
-        '    <application',
-        1,
-    )
 
 speech_intent = '<intent><action android:name="android.speech.RecognitionService"/></intent>'
 if 'RecognitionService' not in s:
@@ -30,6 +22,13 @@ if 'RecognitionService' not in s:
         s = s.replace('<queries>', '<queries>\n        ' + speech_intent, 1)
     else:
         s = s.replace('</manifest>', '    <queries>\n        ' + speech_intent + '\n    </queries>\n</manifest>', 1)
+
+view_intent = '<intent><action android:name="android.intent.action.VIEW"/><data android:scheme="https"/></intent>'
+if 'android.intent.action.VIEW' not in s:
+    if '<queries>' in s:
+        s = s.replace('<queries>', '<queries>\n        ' + view_intent, 1)
+    else:
+        s = s.replace('</manifest>', '    <queries>\n        ' + view_intent + '\n    </queries>\n</manifest>', 1)
 
 meta = '\n        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="subject_segment"/>'
 if 'mlkit.vision.DEPENDENCIES' not in s:
