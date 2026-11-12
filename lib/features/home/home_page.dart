@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/services/media_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../camera/camera_page.dart';
 import '../poster_builder/model/doc.dart';
@@ -35,7 +36,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _menu = false);
     final m = await MediaService.pick();
     if (m == null || !mounted) return;
-    final k = math.min(1.0, 2048 / math.max(m.w, m.h));
+    final k = math.min(1.0, StorageService.maxImport / math.max(m.w, m.h));
     final w = (m.w * k).roundToDouble(), h = (m.h * k).roundToDouble();
     final d = Doc.blank(name: 'صورة', w: w, h: h);
     d.layers.add(Layer.create(LayerType.image, name: 'صورة')

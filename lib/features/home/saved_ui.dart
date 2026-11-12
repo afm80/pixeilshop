@@ -109,16 +109,37 @@ Future<void> showAppSettings(BuildContext context) => showDialog<void>(
         builder: (ctx, set) => AlertDialog(
           backgroundColor: AppColors.panel,
           title: const Text('إعدادات التطبيق', style: TextStyle(color: AppColors.accent2)),
-          content: SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('حفظ تلقائي'),
-            value: StorageService.autosave,
-            activeColor: AppColors.accent2,
-            onChanged: (v) async {
-              await StorageService.setAutosave(v);
-              set(() {});
-            },
-          ),
+          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('حفظ تلقائي'),
+              value: StorageService.autosave,
+              activeColor: AppColors.accent2,
+              onChanged: (v) async {
+                await StorageService.setAutosave(v);
+                set(() {});
+              },
+            ),
+            const SizedBox(height: 10),
+            const Text('الحد الأقصى لحجم الصور المستوردة'),
+            const SizedBox(height: 8),
+            Row(children: [
+              for (final v in const [1280, 1536, 2048])
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  child: ChoiceChip(
+                    label: Text('$v'),
+                    selected: StorageService.maxImport == v,
+                    selectedColor: AppColors.accent2,
+                    labelStyle: TextStyle(color: StorageService.maxImport == v ? Colors.black : null),
+                    onSelected: (_) async {
+                      await StorageService.setMaxImport(v);
+                      set(() {});
+                    },
+                  ),
+                ),
+            ]),
+          ]),
           actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
         ),
       ),
