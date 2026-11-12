@@ -215,6 +215,7 @@ class _EditorShellState extends State<EditorShell> {
     'stickers': 'ملصقات',
     'saved': 'تصميم',
     'p:hl': 'تحديد',
+    'p:texteffects': 'تأثيرات النص',
   };
 
   void _touch() {
@@ -400,6 +401,7 @@ class _EditorShellState extends State<EditorShell> {
         return const [
           (icon: Icons.palette_outlined, label: 'اللون', tool: 'p:color'),
           (icon: Icons.font_download_outlined, label: 'الخطوط', tool: 'p:font'),
+          (icon: Icons.auto_awesome, label: 'تأثيرات', tool: 'p:texteffects'),
           (icon: Icons.border_style, label: 'إحاطة', tool: 'p:border'),
           (icon: Icons.waves, label: 'تقويس', tool: 'p:curve'),
           (icon: Icons.blur_on, label: 'الظل', tool: 'p:shadow'),

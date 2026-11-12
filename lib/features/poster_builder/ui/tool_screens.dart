@@ -13,6 +13,8 @@ import '../model/doc.dart';
 import '../model/layer.dart';
 import 'canvas_view.dart';
 import 'editor_panel.dart';
+import 'auto_enhance.dart';
+import '../../../core/utils/poster_painter.dart' show kShowOriginal;
 import 'sticker_data.g.dart';
 
 const kYellow = Color(0xFFFFC400);
@@ -61,6 +63,8 @@ double toolHeight(String t) {
     case 'filters':
     case 'dfilters':
       return 124;
+    case 'texteffects':
+      return 104;
     case 'color':
     case 'bgcolor':
       return 118;
@@ -89,6 +93,20 @@ List<Widget> toolExtras(String t, ToolCtx c) {
     case 'filters':
     case 'dfilters':
       return [
+        Tooltip(
+          message: 'اضغط مطولاً لعرض الأصل',
+          child: Listener(
+            onPointerDown: (_) => kShowOriginal.value = true,
+            onPointerUp: (_) => kShowOriginal.value = false,
+            onPointerCancel: (_) => kShowOriginal.value = false,
+            child: const Padding(padding: EdgeInsets.all(8), child: Icon(Icons.compare, color: kYellow, size: 28)),
+          ),
+        ),
+        IconButton(
+          tooltip: 'تحسين تلقائي',
+          onPressed: () => autoEnhance(c, layer: t == 'filters'),
+          icon: const Icon(Icons.auto_fix_high, color: kYellow, size: 28),
+        ),
         IconButton(
           onPressed: () {
             if (t == 'filters') {
@@ -399,6 +417,9 @@ Widget? buildToolBody(String t, ToolCtx c) {
               x.grad1 = v;
             })),
       ]);
+    case 'texteffects':
+      if (l == null) return null;
+      return _TextEffects(c: c, l: l);
     case 'brush':
       return _Brush(c: c);
     case 'stickers':
@@ -434,6 +455,120 @@ Widget _adjustSliders(Adjust a, void Function(void Function(Adjust)) set) {
       row('تشبع', a.saturation, -1, 1, (x, v) => x.saturation = v, show: lvl),
     ],
   );
+}
+
+/// أنماط نص جاهزة: كل نمط يعيد ضبط التأثيرات ثم يطبّق مزيجاً من الظل/الحدود/العمق.
+class _TextEffects extends StatelessWidget {
+  const _TextEffects({required this.c, required this.l});
+  final ToolCtx c;
+  final Layer l;
+
+  static void _clear(Layer x) {
+    x.shOn = false;
+    x.strokeW = 0;
+    x.depthOn = false;
+    x.hlOn = false;
+    x.reflOn = false;
+  }
+
+  static final List<(String, Color, List<Shadow>, void Function(Layer))> _presets = [
+    ('بدون', Colors.white, const [], _clear),
+    ('نيون', Colors.white, const [Shadow(color: Color(0xFF00E5FF), blurRadius: 12)], (x) {
+      _clear(x);
+      x.color = 0xFFFFFFFF;
+      x.fillKind = 0;
+      x.shOn = true;
+      x.shColor = 0xFF00E5FF;
+      x.shBlur = 32;
+      x.shDx = 0;
+      x.shDy = 0;
+      x.shOpacity = 1;
+    }),
+    ('توهج وردي', const Color(0xFFFFF0F6), const [Shadow(color: Color(0xFFFF2BD6), blurRadius: 12)], (x) {
+      _clear(x);
+      x.color = 0xFFFFF0F6;
+      x.fillKind = 0;
+      x.shOn = true;
+      x.shColor = 0xFFFF2BD6;
+      x.shBlur = 34;
+      x.shDx = 0;
+      x.shDy = 0;
+      x.shOpacity = 1;
+    }),
+    ('توهج ذهبي', const Color(0xFFFFE08A), const [Shadow(color: Color(0xFFFFB300), blurRadius: 12)], (x) {
+      _clear(x);
+      x.color = 0xFFFFE08A;
+      x.fillKind = 0;
+      x.shOn = true;
+      x.shColor = 0xFFFFB300;
+      x.shBlur = 30;
+      x.shDx = 0;
+      x.shDy = 0;
+      x.shOpacity = 1;
+    }),
+    ('حدود سوداء', Colors.white, const [Shadow(color: Colors.black, blurRadius: 0, offset: Offset(1, 1)), Shadow(color: Colors.black, blurRadius: 0, offset: Offset(-1, -1))], (x) {
+      _clear(x);
+      x.color = 0xFFFFFFFF;
+      x.fillKind = 0;
+      x.strokeW = 10;
+      x.strokeColor = 0xFF000000;
+    }),
+    ('ثلاثي الأبعاد', Colors.white, const [Shadow(color: Color(0xFF1A237E), blurRadius: 0, offset: Offset(3, 3))], (x) {
+      _clear(x);
+      x.color = 0xFFFFFFFF;
+      x.fillKind = 0;
+      x.depthOn = true;
+      x.depthColor = 0xFF1A237E;
+      x.depthLen = 26;
+      x.depthAngle = 45;
+    }),
+    ('ظل ناعم', Colors.white, const [Shadow(color: Color(0x99000000), blurRadius: 6, offset: Offset(2, 4))], (x) {
+      _clear(x);
+      x.color = 0xFFFFFFFF;
+      x.fillKind = 0;
+      x.shOn = true;
+      x.shColor = 0xFF000000;
+      x.shBlur = 14;
+      x.shDx = 6;
+      x.shDy = 10;
+      x.shOpacity = 0.5;
+    }),
+    ('انعكاس', Colors.white, const [], (x) {
+      _clear(x);
+      x.reflOn = true;
+      x.reflOpacity = 0.4;
+      x.reflGap = 6;
+    }),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        children: [
+          for (final p in _presets)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: InkWell(
+                onTap: () => c.mut(p.$4),
+                child: Container(
+                  width: 92,
+                  decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(8)),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text('نص', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: p.$2, shadows: p.$3)),
+                    const SizedBox(height: 4),
+                    Text(p.$1, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                  ]),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Brush extends StatelessWidget {

@@ -58,7 +58,7 @@ class _ExportDialogState extends State<_ExportDialog> {
     try {
       final d = widget.doc;
       final scale = _sizes[_sel] / math.max(d.w, d.h);
-      final img = await ExportService.render(d, widget.images, scale: scale);
+      final img = await ExportService.render(d, widget.images, scale: scale, watermark: true);
       final bytes = await ExportService.encode(img, _fmt, quality: 95);
       if (widget.share) {
         await ExportService.share(bytes, _fmt);
