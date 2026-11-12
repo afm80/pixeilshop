@@ -679,6 +679,20 @@ Path shapePath(Layer l, Rect b) {
     case ShapeKind.decagon:
       _poly(p, b, 10);
       break;
+    case ShapeKind.poly:
+      final q = l.polyPts;
+      if (q.length >= 6) {
+        for (var i = 0; i + 1 < q.length; i += 2) {
+          final pt = Offset(b.left + q[i] * b.width, b.top + q[i + 1] * b.height);
+          if (i == 0) {
+            p.moveTo(pt.dx, pt.dy);
+          } else {
+            p.lineTo(pt.dx, pt.dy);
+          }
+        }
+        p.close();
+      }
+      break;
     case ShapeKind.line:
       final t = math.max(4.0, b.height * 0.06);
       p.addRRect(RRect.fromRectAndRadius(
