@@ -40,6 +40,18 @@ class StorageService {
 
   static Future<void> setMaxImport(int v) async => _setBox?.put('maxImport', '$v');
 
+  /// علامة مائية تُضاف إلى الصور المصدّرة (نص و/أو شعار).
+  static bool get wmOn => _setBox?.get('wmOn') == '1';
+  static Future<void> setWmOn(bool v) async => _setBox?.put('wmOn', v ? '1' : '0');
+  static String get wmText => _setBox?.get('wmText') ?? '';
+  static Future<void> setWmText(String v) async => _setBox?.put('wmText', v);
+  static String? get wmLogo {
+    final v = _setBox?.get('wmLogo');
+    return (v == null || v.isEmpty || !File(v).existsSync()) ? null : v;
+  }
+
+  static Future<void> setWmLogo(String? v) async => _setBox?.put('wmLogo', v ?? '');
+
   static bool exists(String id) => _b.containsKey(id);
 
   /// يحفظ نسخة من التصميم تحت معرّف واسم محددين (حفظ جديد أو كتابة فوق تصميم محفوظ).
