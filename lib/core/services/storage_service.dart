@@ -18,11 +18,26 @@ class ProjectMeta {
 /// تخزين المشاريع محلياً عبر Hive (JSON لكل مشروع).
 class StorageService {
   static const _boxName = 'pixeilshop_projects';
+  static const _setBoxName = 'pixeilshop_settings';
   static Box<String>? _box;
+  static Box<String>? _setBox;
 
   static Future<void> init() async {
     await Hive.initFlutter();
     _box = await Hive.openBox<String>(_boxName);
+    _setBox = await Hive.openBox<String>(_setBoxName);
+  }
+
+  /// الحفظ التلقائي للتصاميم أثناء التعديل (مطفأ افتراضياً).
+  static bool get autosave => _setBox?.get('autosave') == '1';
+  static Future<void> setAutosave(bool v) async => _setBox?.put('autosave', v ? '1' : '0');
+
+  static bool exists(String id) => _b.containsKey(id);
+
+  /// يحفظ نسخة من التصميم تحت معرّف واسم محددين (حفظ جديد أو كتابة فوق تصميم محفوظ).
+  static Future<void> saveCopy(Doc doc, String id, String name) async {
+    final c = Doc.fromJson({...doc.toJson(), 'id': id, 'name': name});
+    await save(c);
   }
 
   static Box<String> get _b => _box!;
