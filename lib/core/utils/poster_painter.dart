@@ -14,15 +14,19 @@ import 'text_metrics.dart';
 
 /// يرسم التصميم كاملاً بإحداثيات التصميم (0..doc.w, 0..doc.h).
 /// يُستخدم للعرض الحي وللتصدير بنفس الكود (ما تراه هو ما يُصدَّر).
+/// عند true تُرسم الصورة بدون أي تعديل لوني (للمقارنة قبل/بعد بالضغط المطوّل).
+final ValueNotifier<bool> kShowOriginal = ValueNotifier<bool>(false);
+
 void paintDoc(Canvas c, Doc doc, ImageStore images, {bool checker = false}) {
   final rect = Rect.fromLTWH(0, 0, doc.w, doc.h);
   c.save();
   c.clipRect(rect);
   if (checker && (doc.bgKind == 3 || doc.bgCorner > 0 || doc.bgOpacity < 0.999)) _checker(c, rect);
 
-  final useGlobal = doc.adjust.hasMatrix;
-  final useNoise = doc.adjust.hasNoise;
-  final smooth = ColorMatrices.smoothFor(doc.adjust);
+  final orig = kShowOriginal.value;
+  final useGlobal = !orig && doc.adjust.hasMatrix;
+  final useNoise = !orig && doc.adjust.hasNoise;
+  final smooth = orig ? 0.0 : ColorMatrices.smoothFor(doc.adjust);
   if (useGlobal || useNoise || smooth > 0.01) {
     final p = Paint();
     if (useGlobal) p.colorFilter = ColorFilter.matrix(ColorMatrices.forAdjust(doc.adjust));
@@ -56,7 +60,7 @@ void paintDoc(Canvas c, Doc doc, ImageStore images, {bool checker = false}) {
   if (useNoise) _noise(c, rect, doc.adjust.noise);
   if (useGlobal || useNoise || smooth > 0.01) c.restore();
 
-  if (doc.adjust.vignette > 0) {
+  if (!orig && doc.adjust.vignette > 0) {
     final v = doc.adjust.vignette.clamp(0.0, 1.0).toDouble();
     final center = rect.center;
     final radius = math.sqrt(doc.w * doc.w + doc.h * doc.h) / 2;
@@ -202,7 +206,7 @@ void _paintLayer(Canvas c, Layer l, ImageStore images) {
   c.rotate(l.rotation);
   c.scale(l.flipX ? -l.scale : l.scale, l.scale);
 
-  final hasAdj = l.adj.hasMatrix;
+  final hasAdj = !kShowOriginal.value && l.adj.hasMatrix;
   final needsLayer = l.opacity < 0.999 || l.blend != 0 || hasAdj || l.adj.hasNoise;
   if (needsLayer) {
     final p = Paint()
@@ -232,7 +236,7 @@ void _paintLayer(Canvas c, Layer l, ImageStore images) {
       break;
   }
 
-  if (l.adj.hasNoise) _noise(c, bounds, l.adj.noise);
+  if (!kShowOriginal.value && l.adj.hasNoise) _noise(c, bounds, l.adj.noise);
   if (needsLayer) c.restore();
   c.restore();
 }
@@ -732,7 +736,7 @@ void _drawShape(Canvas c, Layer l, ImageStore images, Rect bounds) {
 
 /// يرسم التصميم على الشاشة بمقياس معين.
 class PosterPainter extends CustomPainter {
-  PosterPainter({required this.doc, required this.images, required this.revision}) : super(repaint: images);
+  PosterPainter({required this.doc, required this.images, required this.revision}) : super(repaint: Listenable.merge([images, kShowOriginal]));
   final Doc doc;
   final ImageStore images;
   final int revision;
