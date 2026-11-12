@@ -42,6 +42,8 @@ for name in ('build.gradle.kts', 'build.gradle'):
     if f.exists():
         t = f.read_text(encoding='utf-8')
         t = t.replace('flutter.minSdkVersion', '24')
+        # اسم الحزمة (applicationId) المطلوب. الـ namespace يبقى كما أنشأه flutter create كي لا تنكسر MainActivity.
+        t = re.sub(r'applicationId\s*=?\s*["\'][^"\']*["\']', 'applicationId = "app.pixeilshop.com"' if name.endswith('.kts') else 'applicationId "app.pixeilshop.com"', t, count=1)
         f.write_text(t, encoding='utf-8')
         print('patched', f)
 print('manifest patched')
