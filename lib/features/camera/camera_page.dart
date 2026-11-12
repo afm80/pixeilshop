@@ -46,7 +46,14 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
   double _pinchStartDist = 0, _pinchStartZoom = 1;
 
   int _filter = 0;
-  final PageController _filterCtrl = PageController(viewportFraction: 0.2);
+  // عرض خانة الفلتر ثابت (66px) فتتجاور الدوائر بدل أن تتباعد على الشاشات العريضة
+  late final PageController _filterCtrl = PageController(viewportFraction: _filterFraction());
+
+  double _filterFraction() {
+    final v = WidgetsBinding.instance.platformDispatcher.views.first;
+    final w = v.physicalSize.width / v.devicePixelRatio;
+    return (66 / w).clamp(0.08, 0.3).toDouble();
+  }
 
   Offset? _focusPos;
   Timer? _focusTimer;
@@ -299,28 +306,32 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
   }
 
   Widget _topBar() {
-    final flashIcon = _flash == FlashMode.off
-        ? Icons.flash_off
-        : (_flash == FlashMode.auto ? Icons.flash_auto : Icons.flash_on);
-    final timerIcon = _timer == 0 ? Icons.timer_off : (_timer == 3 ? Icons.timer_3 : Icons.timer_10);
+    if ((_zoom - 1).abs() <= 0.05) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      child: Row(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(14)),
+        child: Text('${_zoom.toStringAsFixed(1)}×', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  /// أيقونات عمودية على الجانب (قلب الكاميرا، الفلاش، المؤقت، الاستوديو).
+  Widget _sideBar() {
+    final flashIcon = _flash == FlashMode.off
+        ? Icons.flash_off_rounded
+        : (_flash == FlashMode.auto ? Icons.flash_auto_rounded : Icons.flash_on_rounded);
+    final timerIcon = _timer == 0 ? Icons.timer_off_outlined : (_timer == 3 ? Icons.timer_3 : Icons.timer_10);
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (Navigator.of(context).canPop()) ...[
-            _CamBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).maybePop()),
-            const SizedBox(width: 10),
-          ],
-          if (!_isFront) _CamBtn(icon: flashIcon, onTap: _cycleFlash),
-          if (!_isFront) const SizedBox(width: 10),
-          _CamBtn(icon: timerIcon, onTap: _cycleTimer),
-          const Spacer(),
-          if ((_zoom - 1).abs() > 0.05)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(14)),
-              child: Text('${_zoom.toStringAsFixed(1)}×', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
+          CamSideBtn(icon: Icons.flip_camera_ios_rounded, tip: 'قلب الكاميرا', onTap: _cams.length > 1 ? _flip : null),
+          if (!_isFront) CamSideBtn(icon: flashIcon, tip: 'الفلاش', onTap: _cycleFlash, active: _flash != FlashMode.off),
+          CamSideBtn(icon: timerIcon, tip: 'المؤقت', onTap: _cycleTimer, active: _timer != 0),
+          CamSideBtn(icon: Icons.photo_library_rounded, tip: 'الاستوديو', onTap: _fromGallery),
         ],
       ),
     );
@@ -345,8 +356,8 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
             child: Center(
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                width: sel ? 56 : 42,
-                height: sel ? 56 : 42,
+                width: sel ? 60 : 46,
+                height: sel ? 60 : 46,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [p.swatch1, p.swatch2], begin: Alignment.topLeft, end: Alignment.bottomRight),
@@ -390,17 +401,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
             ),
             _filterCarousel(),
             const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _CamBtn(icon: Icons.photo_library_outlined, onTap: _fromGallery, size: 50),
-                  _captureButton(),
-                  _CamBtn(icon: Icons.flip_camera_android_outlined, onTap: _cams.length > 1 ? _flip : null, size: 50),
-                ],
-              ),
-            ),
+            _captureButton(),
           ],
         ),
       );
@@ -478,6 +479,7 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
                 ),
               ),
             if (ready) SafeArea(child: Align(alignment: Alignment.topCenter, child: _topBar())),
+            if (ready) SafeArea(child: Align(alignment: Alignment.centerRight, child: _sideBar())),
             if (ready) SafeArea(child: Align(alignment: Alignment.bottomCenter, child: _bottomBar())),
             if (_countdown > 0)
               Center(

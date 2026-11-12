@@ -31,7 +31,41 @@ Doc docFromPhoto(MediaRef m, {int preset = 0, bool mirror = false}) {
   return d;
 }
 
-/// شاشة ما بعد الالتقاط: معاينة + تغيير الفلتر بالتمرير الأفقي + حفظ / مشاركة / تعديل.
+/// زر أيقونة فقط بأسلوب سناب شات: أيقونة بيضاء بظل خفيف، ووصف عند الضغط المطوّل.
+class CamSideBtn extends StatelessWidget {
+  const CamSideBtn({super.key, required this.icon, required this.tip, required this.onTap, this.active = false});
+  final IconData icon;
+  final String tip;
+  final VoidCallback? onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tip,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 28,
+          child: Container(
+            width: 52,
+            height: 52,
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active ? Colors.white24 : Colors.transparent,
+            ),
+            child: Icon(
+              icon,
+              size: 30,
+              color: onTap == null ? Colors.white38 : Colors.white,
+              shadows: const [Shadow(blurRadius: 8, color: Colors.black87), Shadow(blurRadius: 2, color: Colors.black54)],
+            ),
+          ),
+        ),
+      );
+}
+
+/// شاشة ما بعد الالتقاط: الصورة + أيقونات عمودية (نص، رسم، ملصقات، فلاتر، قص، تعديل، حفظ).
+/// التمرير الأفقي على الصورة يغيّر الفلتر، والرجوع من زر الجهاز.
 class CapturePreviewPage extends StatefulWidget {
   const CapturePreviewPage({super.key, required this.photo, this.preset = 0, this.mirror = false});
   final MediaRef photo;
@@ -81,19 +115,15 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
     if (v > 250) _setPreset(_preset - 1); // سحب لليمين → السابق
   }
 
-  Future<void> _export({required bool share}) async {
+  Future<void> _save() async {
     if (_busy) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
       final img = await ExportService.render(_doc, _images);
       final bytes = await ExportService.encode(img, ExportFormat.jpg, quality: 95);
-      if (share) {
-        await ExportService.share(bytes, ExportFormat.jpg);
-      } else {
-        await ExportService.saveToGallery(bytes, ExportFormat.jpg);
-        messenger.showSnackBar(const SnackBar(content: Text('تم الحفظ في المعرض')));
-      }
+      await ExportService.saveToGallery(bytes, ExportFormat.jpg);
+      messenger.showSnackBar(const SnackBar(content: Text('تم الحفظ في المعرض')));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('فشل الحفظ: $e')));
     } finally {
@@ -101,9 +131,17 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
     }
   }
 
-  void _edit() {
+  /// يفتح المحرر على أداة معينة ('' = المحرر كاملاً).
+  void _toEditor(String tool) {
     _handedOff = true;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => EditorPage(doc: _doc)));
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => EditorPage(doc: _doc, startTool: tool)));
+  }
+
+  Future<void> _pickFilter() async {
+    final i = await Navigator.of(context).push<int>(
+      MaterialPageRoute(builder: (_) => _FiltersPage(path: widget.photo.path, mirror: widget.mirror, current: _preset)),
+    );
+    if (i != null) _setPreset(i);
   }
 
   @override
@@ -138,39 +176,21 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
               ),
             SafeArea(
               child: Align(
-                alignment: Alignment.topLeft,
+                alignment: Alignment.topRight,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: _RoundBtn(icon: Icons.close, onTap: () => Navigator.of(context).pop()),
-                ),
-              ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Row(
+                  padding: const EdgeInsets.fromLTRB(0, 12, 8, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _RoundBtn(icon: Icons.download_rounded, onTap: _busy ? null : () => _export(share: false)),
-                      const SizedBox(width: 10),
-                      _RoundBtn(icon: Icons.ios_share_rounded, onTap: _busy ? null : () => _export(share: true)),
-                      const Spacer(),
-                      if (_busy)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 14),
-                          child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.accent)),
-                        ),
-                      FilledButton.icon(
-                        onPressed: _busy ? null : _edit,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                        ),
-                        icon: const Icon(Icons.tune_rounded),
-                        label: const Text('تعديل', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                      ),
+                      CamSideBtn(icon: Icons.text_fields_rounded, tip: 'نص', onTap: () => _toEditor('text')),
+                      CamSideBtn(icon: Icons.edit_rounded, tip: 'رسم', onTap: () => _toEditor('brush')),
+                      CamSideBtn(icon: Icons.sticky_note_2_outlined, tip: 'ملصقات وإيموجي', onTap: () => _toEditor('stickers')),
+                      CamSideBtn(icon: Icons.auto_awesome_rounded, tip: 'الفلاتر', onTap: _pickFilter, active: _preset != 0),
+                      CamSideBtn(icon: Icons.crop_rounded, tip: 'قص وتحجيم', onTap: () => _toEditor('crop')),
+                      CamSideBtn(icon: Icons.tune_rounded, tip: 'تعديل', onTap: () => _toEditor('')),
+                      _busy
+                          ? const SizedBox(width: 52, height: 60, child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.accent))))
+                          : CamSideBtn(icon: Icons.download_rounded, tip: 'حفظ', onTap: _save),
                     ],
                   ),
                 ),
@@ -183,19 +203,47 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
   }
 }
 
-class _RoundBtn extends StatelessWidget {
-  const _RoundBtn({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
+/// صفحة اختيار الفلتر: شبكة معاينات للصورة نفسها، واللمس يختار ويرجع.
+class _FiltersPage extends StatelessWidget {
+  const _FiltersPage({required this.path, required this.mirror, required this.current});
+  final String path;
+  final bool mirror;
+  final int current;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: Colors.black54,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(width: 46, height: 46, child: Icon(icon, color: onTap == null ? Colors.white38 : Colors.white, size: 24)),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final presets = ColorMatrices.presets;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(backgroundColor: Colors.black, title: const Text('الفلاتر'), centerTitle: true),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 150, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.78),
+        itemCount: presets.length,
+        itemBuilder: (_, i) {
+          final p = presets[i];
+          Widget img = Image.file(File(path), fit: BoxFit.cover, cacheWidth: 360);
+          if (mirror) img = Transform(alignment: Alignment.center, transform: Matrix4.diagonal3Values(-1, 1, 1), child: img);
+          return GestureDetector(
+            onTap: () => Navigator.of(context).pop(i),
+            child: Column(children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: i == current ? AppColors.accent2 : Colors.transparent, width: 3),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  width: double.infinity,
+                  child: ColorFiltered(colorFilter: ColorFilter.matrix(p.matrix), child: img),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(p.name, style: TextStyle(color: i == current ? AppColors.accent2 : Colors.white70, fontSize: 12)),
+            ]),
+          );
+        },
+      ),
+    );
+  }
 }
