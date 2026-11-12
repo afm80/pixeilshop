@@ -14,6 +14,7 @@ class Adjust {
     this.invert = 0,
     this.noise = 0,
     this.smooth = 0,
+    this.noPresetSmooth = false,
     this.preset = 0,
     this.presetAmount = 1,
   });
@@ -31,6 +32,7 @@ class Adjust {
   double invert; // 0..1 عكس
   double noise; // 0..1 تشويش
   double smooth; // 0..1 تنعيم البشرة (تجميل)
+  bool noPresetSmooth; // التنعيم مخبوز في الصورة (تجميل الكاميرا) فلا يُطبَّق تنعيم الفلتر
   int preset; // 0 = بدون
   double presetAmount; // 0..1
 
@@ -65,6 +67,7 @@ class Adjust {
     invert = 0;
     noise = 0;
     smooth = 0;
+    noPresetSmooth = false;
     preset = 0;
     presetAmount = 1;
   }
@@ -85,6 +88,7 @@ class Adjust {
         'iv': invert,
         'no': noise,
         'sm': smooth,
+        'ns': noPresetSmooth,
         'p': preset,
         'pa': presetAmount,
       };
@@ -106,6 +110,7 @@ class Adjust {
       invert: d('iv'),
       noise: d('no'),
       smooth: d('sm'),
+      noPresetSmooth: m['ns'] == true,
       preset: (m['p'] as num?)?.toInt() ?? 0,
       presetAmount: d('pa', 1),
     );
