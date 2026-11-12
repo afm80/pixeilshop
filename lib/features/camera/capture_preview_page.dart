@@ -123,6 +123,9 @@ class _CapturePreviewPageState extends State<CapturePreviewPage> {
     }
     _setBaked(out);
     setState(() => _beautyBusy = false);
+    if (out != null && pr.smooth > 0 && !(_beauty?.hasFace ?? true)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لم يُكتشف وجه: طُبّق تمويه الخلفية فقط')));
+    }
     if (out == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لم يُكتشف شخص في الصورة، لم يُطبَّق التجميل')));
     }
