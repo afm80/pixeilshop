@@ -59,7 +59,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final list = [for (final t in kTemplates) if (_cat == 'الكل' || t.category == _cat) t];
+    final list = [for (final t in kTemplates) if (_cat == 'الكل' || templateTab(t) == _cat) t];
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
