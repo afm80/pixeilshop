@@ -11,6 +11,7 @@ import '../poster_builder/model/doc.dart';
 import '../poster_builder/model/layer.dart';
 import '../poster_builder/ui/editor_page.dart';
 import 'new_design_page.dart';
+import '../templates/templates_page.dart';
 import 'saved_page.dart';
 
 const _tileColor = Color(0xFF252525);
@@ -104,7 +105,13 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: gap),
                       SizedBox(
                         width: cw,
-                        height: 58,
+                        height: 62,
+                        child: _Tile(icon: Icons.dashboard_customize_outlined, label: 'قوالب جاهزة', size: 17, row: true, onTap: () => _go(const TemplatesPage())),
+                      ),
+                      const SizedBox(height: gap),
+                      SizedBox(
+                        width: cw,
+                        height: 62,
                         child: _Tile(icon: Icons.folder_open_outlined, label: 'تصاميم محفوظة', size: 17, row: true, onTap: () => _go(const SavedPage())),
                       ),
                     ],
@@ -144,9 +151,18 @@ class _Tile extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: _tileColor,
-        child: InkWell(
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _orange.withValues(alpha: 0.28)),
+          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF2E2E2E), Color(0xFF1E1E1E)]),
+          boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(0, 5))],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
           onTap: onTap,
           child: Center(
             child: Flex(
@@ -159,6 +175,7 @@ class _Tile extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
       );
 }
@@ -186,6 +203,8 @@ class _DesignMenu extends StatelessWidget {
     return Material(
       color: _tileColor,
       elevation: 6,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
       child: Column(children: [
         item(Icons.image_outlined, 'من الاستوديو', onGallery),
         const Divider(height: 1, color: Colors.white10),
