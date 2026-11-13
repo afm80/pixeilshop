@@ -101,8 +101,9 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     try {
       if (_cams.isEmpty) {
         _cams = await availableCameras();
-        final back = _cams.indexWhere((c) => c.lensDirection == CameraLensDirection.back);
-        _camIndex = back < 0 ? 0 : back;
+        // الكاميرا الأمامية هي الافتراضية، فإن لم توجد نستخدم أول كاميرا متاحة
+        final front = _cams.indexWhere((c) => c.lensDirection == CameraLensDirection.front);
+        _camIndex = front < 0 ? 0 : front;
       }
       if (_cams.isEmpty) throw CameraException('none', 'لا توجد كاميرا في هذا الجهاز');
       await _open(_camIndex);
